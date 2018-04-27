@@ -33,6 +33,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/matoous/go-nanoid"
+  packages = ["."]
+  revision = "958d370425a1ea42a4dd3c67d15bf02554a16b82"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
@@ -100,6 +106,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7c42df73734434be349535a3beadc8988a0283f9f6177f8e2a59aff68cbb9136"
+  inputs-digest = "8157a1c489ab66f4a583c76f57d2508241d8d35a1c3bd7b9cd850e5a7b4e277d"
   solver-name = "gps-cdcl"
   solver-version = 1

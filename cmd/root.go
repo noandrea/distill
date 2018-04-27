@@ -30,7 +30,7 @@ var cfgFile string
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "iljl",
-	Short: "A brief description of your application",
+	Short: "A practical url shortener",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
 
@@ -53,15 +53,10 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
 	// Here you will define your flags and configuration settings.
 	// Cobra supports Persistent Flags, which, if defined here,
 	// will be global for your application.
-
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/iljl/shortener.conf.yaml)")
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	//RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -83,6 +78,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		mlog.Info("Using config file: %s", viper.ConfigFileUsed())
 		viper.Unmarshal(&internal.Config)
+		internal.Config.validate()
 	}
-
 }

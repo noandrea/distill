@@ -8,7 +8,7 @@ server:
 
 # short id configuration
 short-id:
-  character-set: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   length: 6
   ttl: 0 # 0 means no expiration
   max-requests: 0 # 0 means no limits
