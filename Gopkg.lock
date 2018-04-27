@@ -33,12 +33,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/matoous/go-nanoid"
-  packages = ["."]
-  revision = "958d370425a1ea42a4dd3c67d15bf02554a16b82"
-
-[[projects]]
-  branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
@@ -87,6 +81,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/unrolled/render"
+  packages = ["."]
+  revision = "65450fb6b2d3595beca39f969c411db8f8d5c806"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "cbbc999da32df943dac6cd71eb3ee39e1d7838b9"
@@ -106,6 +106,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8157a1c489ab66f4a583c76f57d2508241d8d35a1c3bd7b9cd850e5a7b4e277d"
+  inputs-digest = "0594aec994034158dca9956f0dca34bc8e6bfa0d265e4a7d495c39cb7fc9ae54"
   solver-name = "gps-cdcl"
   solver-version = 1

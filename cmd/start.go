@@ -16,7 +16,12 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 
+	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/lowgroundandbigshoes/iljl/internal/iljl"
+
+	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
 )
 
@@ -50,5 +55,34 @@ func init() {
 
 func start(cmd *cobra.Command, args []string) {
 	// TODO: Work your own magic here
-	fmt.Println("start called")
+
+	mlog.Info("                                        ")
+	mlog.Info("    iiii  lllllll  jjjj lllllll         ")
+	mlog.Info("   i::::i l:::::l j::::jl:::::l         ")
+	mlog.Info("    iiii  l:::::l  jjjj l:::::l         ")
+	mlog.Info("          l:::::l       l:::::l         ")
+	mlog.Info("  iiiiiii  l::::ljjjjjjj l::::l         ")
+	mlog.Info("  i:::::i  l::::lj:::::j l::::l         ")
+	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
+	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
+	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
+	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
+	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
+	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
+	mlog.Info("  i::::::il::::::lj::::jl::::::l        ")
+	mlog.Info("  i::::::il::::::lj::::jl::::::l ...... ")
+	mlog.Info("  i::::::il::::::lj::::jl::::::l .::::. ")
+	mlog.Info("  iiiiiiiillllllllj::::jllllllll ...... ")
+	mlog.Info("                  j::::j                ")
+	mlog.Info("        jjjj      j::::j                ")
+	mlog.Info("       j::::jj   j:::::j                ")
+	mlog.Info("       j::::::jjj::::::j                ")
+	mlog.Info("        jj::::::::::::j                 ")
+	mlog.Info("          jjj::::::jjj                  ")
+	mlog.Info("             jjjjjj                     ")
+	mlog.Info("                                        ")
+	mlog.Info("      !!    starting    !!              ")
+
+	r := iljl.RegisterEndpoints()
+	http.ListenAndServe(fmt.Sprintf("%s:%d", internal.Config.Server.Host, internal.Config.Server.Port), r)
 }

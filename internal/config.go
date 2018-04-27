@@ -15,6 +15,7 @@ type ShortIDConfig struct {
 	Length      int    `yaml:"length"`
 	MaxRequests int    `yaml:"max-requests"`
 	TTL         int    `yaml:"ttl"`
+	Domain      string `yaml:"domain"`
 }
 
 // ConfigSchema define the configuration object
