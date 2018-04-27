@@ -4,6 +4,7 @@ server:
   port: 1804
   api-key: naiuraoijodmaojorierjaomdaodorpaokda
   root-redirect: https://mywebsite.com
+  db-path: ./iljl.db
 
 # short id configuration
 short-id:
