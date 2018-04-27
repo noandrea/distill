@@ -20,6 +20,12 @@
   version = "v1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jbrodriguez/mlog"
+  packages = ["."]
+  revision = "006dc6db226a30dddd9e8eab3cce1e44f651ed8a"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
@@ -94,6 +100,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fcde38298e42b45bf4ee82105bfd1d3153ff0b748f67ffb25eeb04d48ee860a0"
+  inputs-digest = "7c42df73734434be349535a3beadc8988a0283f9f6177f8e2a59aff68cbb9136"
   solver-name = "gps-cdcl"
   solver-version = 1
