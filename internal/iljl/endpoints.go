@@ -1,6 +1,7 @@
 package iljl
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -8,9 +9,11 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/unrolled/render"
+	"github.com/go-chi/cors"
+	"github.com/go-chi/render"
 )
 
+// RegisterEndpoints register application endpoints
 func RegisterEndpoints() (router *chi.Mux) {
 	router = chi.NewRouter()
 
@@ -22,33 +25,63 @@ func RegisterEndpoints() (router *chi.Mux) {
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
 	// processing should be stopped.
-	r.Use(middleware.Timeout(60 * time.Second))
+	router.Use(middleware.Timeout(60 * time.Second))
 
-	// redirect the root to the configured url
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	// redirect root to the configured url
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, internal.Config.Server.RootRedirect, 302)
 	})
 	// shortener redirect
-	r.Get("/{ID}", func(w http.ResponseWriter, r *http.Request) {
+	router.Get("/{ID}", func(w http.ResponseWriter, r *http.Request) {
 		shortID := chi.URLParam(r, "ID")
-		longURL, exists := "string", false
+		longURL, exists := fmt.Sprint(internal.Config.ShortID.Domain, "/", shortID), false
+		// if the id does not existsk, send 404
 		if !exists {
 			http.Error(w, "URL not found", 404)
 			return
 		}
+		// send redirect
 		http.Redirect(w, r, longURL, 302)
 	})
 	// handle api requests
 	router.Route("/api", func(r chi.Router) {
-		r.Get("/stats", getGlobalStatistics) // GET /articles
-		r.Post("/short", addURL)             // GET /articles/01-16-2017
+
+		cors := cors.New(cors.Options{
+			AllowedOrigins:   []string{"*"},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+			AllowCredentials: true,
+			MaxAge:           300, // Maximum value not ignored by any of major browsers
+		})
+		// register cors and apiContext middleware
+		r.Use(cors.Handler, apiContext)
+		// handle global statistics
+		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
+			render.JSON(w, r, "ok")
+		})
+		// handle url setup
+		r.Post("/short", func(w http.ResponseWriter, r *http.Request) {
+			render.JSON(w, r, "ok")
+		})
+
+		// delete an id
 		r.Delete("/short/{ID}", func(w http.ResponseWriter, r *http.Request) {
 			shortID := chi.URLParam(r, "ID")
-			render.JSON(w, 200, "ok")
+			render.JSON(w, r, shortID)
 		})
 	})
 
-	router
-
 	return router
+}
+
+// apiContext verify the api key header
+func apiContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("X-API-KEY")
+		if apiKey != internal.Config.Server.APIKey {
+			http.Error(w, http.StatusText(403), 403)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

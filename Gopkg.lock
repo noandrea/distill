@@ -8,6 +8,24 @@
   version = "v1.4.7"
 
 [[projects]]
+  name = "github.com/go-chi/chi"
+  packages = [".","middleware"]
+  revision = "e83ac2304db3c50cf03d96a2fcd39009d458bc35"
+  version = "v3.3.2"
+
+[[projects]]
+  name = "github.com/go-chi/cors"
+  packages = ["."]
+  revision = "dba6525398619dead495962a916728e7ee2ca322"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/go-chi/render"
+  packages = ["."]
+  revision = "9f855fadd4b8cde7773f9ef51f6b2705af239519"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
   packages = [".","hcl/ast","hcl/parser","hcl/printer","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
@@ -30,6 +48,12 @@
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
   version = "v1.7.6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/matoous/go-nanoid"
+  packages = ["."]
+  revision = "958d370425a1ea42a4dd3c67d15bf02554a16b82"
 
 [[projects]]
   branch = "master"
@@ -81,12 +105,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/unrolled/render"
-  packages = ["."]
-  revision = "65450fb6b2d3595beca39f969c411db8f8d5c806"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "cbbc999da32df943dac6cd71eb3ee39e1d7838b9"
@@ -106,6 +124,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0594aec994034158dca9956f0dca34bc8e6bfa0d265e4a7d495c39cb7fc9ae54"
+  inputs-digest = "f97fbcf18e3c4d559af21f4e7e6912915831b7da285a1c6822b7a46366027f52"
   solver-name = "gps-cdcl"
   solver-version = 1

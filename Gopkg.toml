@@ -44,3 +44,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/unrolled/render"
+
+[[constraint]]
+  name = "github.com/go-chi/cors"
+  version = "1.0.0"
