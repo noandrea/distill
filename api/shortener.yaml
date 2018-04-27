@@ -1,0 +1,163 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: URL Shorterner
+  license:
+    name: MIT
+servers:
+  - url: https://iljl.li/v1
+paths:
+  /stats:
+    get:
+      summary: Get server Stats
+      security:
+        - ApiKeyAuth: []
+      operationId: serverStats
+      tags:
+        - statistics
+      responses:
+          '200':
+            description: Created
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Stats'
+          default:
+            description: unexpected error
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/Error"
+  /short:
+    post: # create a short url
+      summary: Create a short url 
+      security:
+        - ApiKeyAuth: []
+      operationId: createShortUrl
+      tags:
+        - urls
+      requestBody:
+        description: contains the specification of the url to be shortened
+        required: true
+        content:
+          application/json:
+          schema:
+            $ref: '#/components/schemas/URLReq'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URLInfo'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete: # delete a short url
+      summary: Delete a short url
+      security:
+        - ApiKeyAuth: []
+      operationId: deleteShortUrl
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URLInfo'
+
+
+  /{Id}:
+    get:
+      summary: Do the shortener job
+      operationId: redirectLong
+      tags:
+        - urls
+      parameters:
+        - name: Id
+          in: path
+          required: true
+          description: the id of the short url
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Expected response to a valid request
+        '404':
+          description: Not found
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    ApiKeyAuth:        # arbitrary name for the security scheme
+      type: apiKey
+      in: header       # can be "header", "query" or "cookie"
+      name: X-API-KEY  # name of the header, query parameter or cookie
+  schemas:
+    URLReq:
+      required:
+        - url
+      properties:
+        url: 
+          type: string
+        id: 
+          type: string
+        ttl: 
+          type: integer
+          format: int64
+        max-requests:
+          type: integer
+          format: int64
+    URLInfo:
+      required:
+        - id
+        - url
+        - counter
+      properties:
+        url: 
+          type: string
+        id: 
+          type: string
+        ttl: 
+          type: integer
+          format: int64
+        counter: 
+          type: integer
+          format: int64
+        bound_at: # date when the mapping has been created
+          type: string
+          format: date-time
+    Stats:
+      properties:
+        characters_id:
+          type: string
+        count_requests:
+          type: integer
+          format: int64
+        count_mappings:
+          type: integer
+          format: int64
+
+    Error:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
