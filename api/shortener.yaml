@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://iljl.li/v1
 paths:
-  /stats:
+  /api/stats:
     get:
       summary: Get server Stats
       security:
@@ -28,7 +28,7 @@ paths:
               application/json:
                 schema:
                   $ref: "#/components/schemas/Error"
-  /short:
+  /api/short:
     post: # create a short url
       summary: Create a short url 
       security:
