@@ -28,8 +28,10 @@ func RegisterEndpoints() (router *chi.Mux) {
 	// processing should be stopped.
 	router.Use(middleware.Timeout(60 * time.Second))
 	// register cors and apiContext middleware
-	router.Use(CORS)
+	router.Use(cors)
 
+	// health check route
+	router.Get("/health-check", healthCheckHanlder)
 	// redirect root to the configured url
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, internal.Config.Server.RootRedirect, 302)
@@ -99,34 +101,42 @@ func RegisterEndpoints() (router *chi.Mux) {
 	return router
 }
 
-// apiContext verify the api key header
-func apiContext(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiKey := r.Header.Get("X-API-KEY")
-		if apiKey != internal.Config.Server.APIKey {
-			http.Error(w, http.StatusText(403), 403)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+//   ____  ____       _       ____  _____  ______   _____     ________  _______     ______
+//  |_   ||   _|     / \     |_   \|_   _||_   _ `.|_   _|   |_   __  ||_   __ \  .' ____ \
+//    | |__| |      / _ \      |   \ | |    | | `. \ | |       | |_ \_|  | |__) | | (___ \_|
+//    |  __  |     / ___ \     | |\ \| |    | |  | | | |   _   |  _| _   |  __ /   _.____`.
+//   _| |  | |_  _/ /   \ \_  _| |_\   |_  _| |_.' /_| |__/ | _| |__/ | _| |  \ \_| \____) |
+//  |____||____||____| |____||_____|\____||______.'|________||________||____| |___|\______.'
+//
+
+func healthCheckHanlder(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("good"))
 }
 
-// Bind on UserPayload will run after the unmarshalling is complete, its
-// a good time to focus some post-processing after a decoding.
+//   ____    ____   ______     ______    ______
+//  |_   \  /   _|.' ____ \  .' ___  | .' ____ \
+//    |   \/   |  | (___ \_|/ .'   \_| | (___ \_|
+//    | |\  /| |   _.____`. | |   ____  _.____`.
+//   _| |_\/_| |_ | \____) |\ `.___]  || \____) |
+//  |_____||_____| \______.' `._____.'  \______.'
+//
+
+// Bind will run after the unmarshalling is complete
 func (u *URLReq) Bind(r *http.Request) error {
 	return nil
 }
 
-// Bind on UserPayload will run after the unmarshalling is complete, its
-// a good time to focus some post-processing after a decoding.
+// Bind will run after the unmarshalling is complete
 func (u *ShortID) Bind(r *http.Request) error {
 	return nil
 }
 
+// Bind will run after the unmarshalling is complete
 func (u *URLInfo) Bind(r *http.Request) error {
 	return nil
 }
 
+// ErrInvalidRequest render an invalid request
 func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -136,6 +146,7 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
+// Render an ErrResponse
 func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
@@ -155,7 +166,28 @@ type ErrResponse struct {
 	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
 }
 
-func CORS(next http.Handler) http.Handler {
+//   ____    ____  _____  ______   ____      ____  _       _______     ________
+//  |_   \  /   _||_   _||_   _ `.|_  _|    |_  _|/ \     |_   __ \   |_   __  |
+//    |   \/   |    | |    | | `. \ \ \  /\  / / / _ \      | |__) |    | |_ \_|
+//    | |\  /| |    | |    | |  | |  \ \/  \/ / / ___ \     |  __ /     |  _| _
+//   _| |_\/_| |_  _| |_  _| |_.' /_  \  /\  /_/ /   \ \_  _| |  \ \_  _| |__/ |
+//  |_____||_____||_____||______.'(_)  \/  \/|____| |____||____| |___||________|
+//
+
+// apiContext verify the api key header
+func apiContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("X-API-KEY")
+		if apiKey != internal.Config.Server.APIKey {
+			http.Error(w, http.StatusText(403), 403)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// cors handler for cors headers
+func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "*")
