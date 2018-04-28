@@ -14,7 +14,7 @@ import (
 
 var (
 	db *badger.DB
-	rq chan ShortUrlGet
+	rq chan ShortID
 )
 
 // NewSession opens the underling storage
@@ -30,7 +30,7 @@ func NewSession() {
 	}
 	// TODO: load statistics from the database
 	// initialize channel for request comunication
-	rq = make(chan ShortUrlGet)
+	rq = make(chan ShortID)
 }
 
 // CloseSession closes the underling storage
@@ -73,9 +73,9 @@ func PreprocessURL(url *URLReq, forceAlphabet, forceLength bool) error {
 }
 
 // UpsertURL insert or udpdate a url mapping
-func UpsertURL(url URLReq, forceAlphabet, forceLength bool) (id string, err error) {
+func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err error) {
 	// preprocess the url and generates the id if necessary
-	err = PreprocessURL(&url, forceAlphabet, forceLength)
+	err = PreprocessURL(url, forceAlphabet, forceLength)
 	if err != nil {
 		return
 	}

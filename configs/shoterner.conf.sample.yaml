@@ -2,16 +2,16 @@
 server:
   host: "0.0.0.0"
   port: 1804
-  api-key: naiuraoijodmaojorierjaomdaodorpaokda
-  root-redirect: https://mywebsite.com
-  db-path: ./iljl.db
+  apiKey: naiuraoijodmaojorierjaomdaodorpaokda
+  rootRedirect: https://mywebsite.com
+  dbPath: ./iljl.db
 
 # short id configuration
-short-id:
+shortId:
   alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   length: 6
   ttl: 0 # 0 means no expiration
-  max-requests: 0 # 0 means no limits
+  maxRequests: 10 # 0 means no limits
   domain: iljl.li
 
 

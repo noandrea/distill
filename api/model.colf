@@ -1,15 +1,7 @@
 // Package demo offers a demonstration.
 package iljl
 
-// Course is the grounds where the game of golf is played.
-type URLReq struct {
-  ID            text `yaml:"id"`
-	URL           text
-	TTL           int64
-	MaxRequests   int64
-}
-
-// Course is the grounds where the game of golf is played.
+// URLInfo contains the data associated to an id
 type URLInfo struct {
   ID            text
 	URL           text
