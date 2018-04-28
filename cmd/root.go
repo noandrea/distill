@@ -25,7 +25,8 @@ import (
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
-var cfgFile string
+var cfgFile, logFile string
+var profile, debug bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -57,27 +58,37 @@ func init() {
 	// Cobra supports Persistent Flags, which, if defined here,
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/iljl/shortener.conf.yaml)")
+	RootCmd.PersistentFlags().StringVar(&logFile, "log", "", "set a logging file, default stdout")
+	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug")
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-
-	mlog.Start(mlog.LevelInfo, "")
+	// enable debug logging if required
+	loglevel := mlog.LevelInfo
+	if debug {
+		loglevel = mlog.LevelTrace
+	}
+	// start logging
+	mlog.Start(loglevel, logFile)
 	mlog.DefaultFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 
-	if cfgFile != "" { // enable ability to specify config file via flag
-		viper.SetConfigFile(cfgFile)
-	}
-
+	// set configuration paramteres
 	viper.SetConfigName("shortener.conf")       // name of config file (without extension)
 	viper.AddConfigPath(os.Getenv("/etc/iljl")) // adding home directory as first search path
 	viper.AddConfigPath(os.Getenv("."))
 	viper.AutomaticEnv() // read in environment variables that match
+	// if there is the config file read it
+	if len(cfgFile) > 0 { // enable ability to specify config file via flag
+		viper.SetConfigFile(cfgFile)
+	}
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		mlog.Info("Using config file: %s", viper.ConfigFileUsed())
 		viper.Unmarshal(&internal.Config)
-		internal.Config.validate()
+		internal.Config.Validate()
+	} else {
+		mlog.Fatalf("Configuration file not found!! %v", cfgFile)
 	}
 }

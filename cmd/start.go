@@ -83,6 +83,7 @@ func start(cmd *cobra.Command, args []string) {
 	mlog.Info("                                        ")
 	mlog.Info("      !!    starting    !!              ")
 
+	iljl.NewSession()
 	r := iljl.RegisterEndpoints()
 	http.ListenAndServe(fmt.Sprintf("%s:%d", internal.Config.Server.Host, internal.Config.Server.Port), r)
 }
