@@ -39,7 +39,7 @@ func CloseSession() {
 }
 
 // PreprocessURL preprocess and validate url
-func PreprocessURL(url *URLReq, forceAlphabet bool) error {
+func PreprocessURL(url *URLReq, forceAlphabet, forceLength bool) error {
 	// chech that the target url is a valid url
 	if _, err := net.ParseRequestURI(url.URL); err != nil {
 		return err
@@ -51,8 +51,12 @@ func PreprocessURL(url *URLReq, forceAlphabet bool) error {
 	} else {
 		p := fmt.Sprintf("[%s]", internal.Config.ShortID.Alphabet)
 		m, _ := regexp.MatchString(p, url.ID)
-		if !m && forceAlphabet {
+		if forceAlphabet && !m {
 			err := fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
+			return err
+		}
+		if forceLength && len(url.ID) != internal.Config.ShortID.Length {
+			err := fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), internal.Config.ShortID.Length)
 			return err
 		}
 	}
@@ -68,10 +72,27 @@ func PreprocessURL(url *URLReq, forceAlphabet bool) error {
 	return nil
 }
 
-func UpsertUrl(url URLReq) error {
-	err := db.Update(func(txn *badger.Txn) error {
+// UpsertURL insert or udpdate a url mapping
+func UpsertURL(url URLReq, forceAlphabet, forceLength bool) (id string, err error) {
+	// preprocess the url and generates the id if necessary
+	err = PreprocessURL(&url, forceAlphabet, forceLength)
+	if err != nil {
+		return
+	}
+	// save the id
+	id = url.ID
+	urlInfo := &URLInfo{
+		ID:          url.ID,
+		URL:         url.URL,
+		TTL:         url.TTL,
+		Counter:     0,
+		MaxRequests: url.MaxRequests,
+		BountAt:     time.Now(),
+	}
+	// insert/update the mapping
+	err = db.Update(func(txn *badger.Txn) error {
 		var err error
-		urlData, err := url.MarshalBinary()
+		urlData, err := urlInfo.MarshalBinary()
 		if err != nil {
 			return err
 		}
@@ -83,37 +104,31 @@ func UpsertUrl(url URLReq) error {
 		}
 		return err
 	})
-	return err
+	return
 }
 
-func DeleteUrl(url URLReq) error {
-	err := db.Update(func(txn *badger.Txn) error {
-		err := txn.Delete([]byte(url.ID))
-		return err
+// DeleteURL delete a url mapping
+func DeleteURL(id string) (err error) {
+	err = db.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(id))
 	})
-	return err
+	return
 }
 
-func GetUrlByID(id string) (url URLInfo) {
-	err := db.View(func(txn *badger.Txn) (err error) {
+// GetURL get an url mapping by it's id
+func GetURL(id string) (url URLInfo, err error) {
+	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(id))
 		if err != nil {
-			return
+			return err
 		}
 		val, err := item.Value()
 		if err != nil {
-			return
+			return err
 		}
 		url = URLInfo{}
-		url.UnmarshalBinary(val)
-		if err != nil {
-			return
-		}
-		fmt.Printf("The answer is: %s\n", val)
-		return
+		err = url.UnmarshalBinary(val)
+		return err
 	})
-	if err != nil {
-		return
-	}
 	return
 }

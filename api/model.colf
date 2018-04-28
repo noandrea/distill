@@ -15,5 +15,6 @@ type URLInfo struct {
 	URL           text
 	Counter       int64
   TTL           int64
+  MaxRequests   int64
 	BountAt       timestamp
 }

@@ -427,6 +427,8 @@ type URLInfo struct {
 
 	TTL int64
 
+	MaxRequests int64
+
 	BountAt time.Time
 }
 
@@ -499,14 +501,32 @@ func (o *URLInfo) MarshalTo(buf []byte) int {
 		i++
 	}
 
+	if v := o.MaxRequests; v != 0 {
+		x := uint64(v)
+		if v >= 0 {
+			buf[i] = 4
+		} else {
+			x = ^x + 1
+			buf[i] = 4 | 0x80
+		}
+		i++
+		for n := 0; x >= 0x80 && n < 8; n++ {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+
 	if v := o.BountAt; !v.IsZero() {
 		s, ns := uint64(v.Unix()), uint32(v.Nanosecond())
 		if s < 1<<32 {
-			buf[i] = 4
+			buf[i] = 5
 			intconv.PutUint32(buf[i+1:], uint32(s))
 			i += 5
 		} else {
-			buf[i] = 4 | 0x80
+			buf[i] = 5 | 0x80
 			intconv.PutUint64(buf[i+1:], s)
 			i += 9
 		}
@@ -555,6 +575,18 @@ func (o *URLInfo) MarshalLen() (int, error) {
 	}
 
 	if v := o.TTL; v != 0 {
+		l += 2
+		x := uint64(v)
+		if v < 0 {
+			x = ^x + 1
+		}
+		for n := 0; x >= 0x80 && n < 8; n++ {
+			x >>= 7
+			l++
+		}
+	}
+
+	if v := o.MaxRequests; v != 0 {
 		l += 2
 		x := uint64(v)
 		if v < 0 {
@@ -796,6 +828,64 @@ func (o *URLInfo) Unmarshal(data []byte) (int, error) {
 	}
 
 	if header == 4 {
+		if i+1 >= len(data) {
+			i++
+			goto eof
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.MaxRequests = int64(x)
+
+		header = data[i]
+		i++
+	} else if header == 4|0x80 {
+		if i+1 >= len(data) {
+			i++
+			goto eof
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.MaxRequests = int64(^x + 1)
+
+		header = data[i]
+		i++
+	}
+
+	if header == 5 {
 		start := i
 		i += 8
 		if i >= len(data) {
@@ -804,7 +894,7 @@ func (o *URLInfo) Unmarshal(data []byte) (int, error) {
 		o.BountAt = time.Unix(int64(intconv.Uint32(data[start:])), int64(intconv.Uint32(data[start+4:]))).In(time.UTC)
 		header = data[i]
 		i++
-	} else if header == 4|0x80 {
+	} else if header == 5|0x80 {
 		start := i
 		i += 12
 		if i >= len(data) {
