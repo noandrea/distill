@@ -70,7 +70,7 @@ func TestPreprocessURL(t *testing.T) {
 			name:    "wrong target url",
 			wantErr: true,
 			args: args{
-				forceAlphabet: true,
+				forceAlphabet: false,
 				forceLength:   false,
 			},
 			url: URLReq{
@@ -90,8 +90,8 @@ func TestPreprocessURL(t *testing.T) {
 			},
 		},
 		{
-			name:    "id set",
-			wantErr: false,
+			name:    "wrong alphabet",
+			wantErr: true,
 			args: args{
 				forceAlphabet: true,
 				forceLength:   false,
@@ -99,6 +99,30 @@ func TestPreprocessURL(t *testing.T) {
 			url: URLReq{
 				URL: "https://ilij.li",
 				ID:  "ilcdef",
+			},
+		},
+		{
+			name:    "wrong lenght",
+			wantErr: true,
+			args: args{
+				forceAlphabet: false,
+				forceLength:   true,
+			},
+			url: URLReq{
+				URL: "https://ilij.li",
+				ID:  "ilc",
+			},
+		},
+		{
+			name:    "wrong lenght and alphabet",
+			wantErr: true,
+			args: args{
+				forceAlphabet: true,
+				forceLength:   true,
+			},
+			url: URLReq{
+				URL: "https://ilij.li",
+				ID:  "abac$$ai",
 			},
 		},
 	}
@@ -119,7 +143,7 @@ func TestPreprocessURL(t *testing.T) {
 				return
 			}
 
-			if len(tt.url.ID) != internal.Config.ShortID.Length {
+			if tt.args.forceLength && len(tt.url.ID) != internal.Config.ShortID.Length {
 				t.Errorf("PreprocessURL() ID length %v, expected %v ", len(tt.url.ID), internal.Config.ShortID.Length)
 				return
 			}
@@ -134,11 +158,15 @@ func TestPreprocessURL(t *testing.T) {
 }
 
 func TestUpsertURL(t *testing.T) {
-
+	type args struct {
+		forceAlphabet bool
+		forceLength   bool
+	}
 	tests := []struct {
 		name    string
 		url     *URLReq
 		wantErr bool
+		args    args
 	}{
 		{
 			name:    "all good",
@@ -146,6 +174,10 @@ func TestUpsertURL(t *testing.T) {
 			url: &URLReq{
 				URL: "https://ilij.li",
 			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   false,
+			},
 		},
 		{
 			name:    "id set",
@@ -154,13 +186,60 @@ func TestUpsertURL(t *testing.T) {
 				URL: "https://ilij.li",
 				ID:  "samesame",
 			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   false,
+			},
 		},
 		{
-			name:    "id set",
+			name:    "overwrite url",
 			wantErr: false,
 			url: &URLReq{
 				URL: "https://wikipedia.li",
 				ID:  "samesame",
+			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   false,
+			},
+		},
+		{
+			name:    "fail length",
+			wantErr: true,
+			url: &URLReq{
+				URL: "https://ilij.li",
+				ID:  "samesame",
+			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   true,
+			},
+		},
+		{
+			name:    "ttl",
+			wantErr: false,
+			url: &URLReq{
+				URL: "https://ilij.li",
+				ID:  "ttlttl",
+				TTL: 30,
+			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   false,
+			},
+		},
+		{
+			name:    "all fields",
+			wantErr: false,
+			url: &URLReq{
+				URL:         "https://ilij.li",
+				ID:          "allfields",
+				TTL:         30,
+				MaxRequests: 50,
+			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   false,
 			},
 		},
 	}
@@ -169,16 +248,21 @@ func TestUpsertURL(t *testing.T) {
 	ids := make(map[string]bool)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := UpsertURL(tt.url, false, false)
-			ids[id] = true
+			id, err := UpsertURL(tt.url, tt.args.forceAlphabet, tt.args.forceLength)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpsertURL() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			// only records in case of success
+			if err == nil {
+				ids[id] = true
 			}
 		})
 	}
 
-	if len(ids) != 2 {
-		t.Errorf("UpsertURL() length = %v, want %v", len(ids), 2)
+	validElements := 4
+	if len(ids) != validElements {
+		t.Errorf("UpsertURL() length = %v, want %v", len(ids), validElements)
 	}
 
 	// test upsert
@@ -245,40 +329,40 @@ func TestGetURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantUrl URLInfo
+		wantURL URLInfo
 		wantErr bool
 	}{{
 		name:    "0",
 		wantErr: false,
-		wantUrl: URLInfo{
+		wantURL: URLInfo{
 			URL: "https://ilij.li/?param=0",
 		},
 	},
 		{
 			name:    "1",
 			wantErr: false,
-			wantUrl: URLInfo{
+			wantURL: URLInfo{
 				URL: "https://ilij.li/?param=1",
 			},
 		},
 		{
 			name:    "2",
 			wantErr: false,
-			wantUrl: URLInfo{
+			wantURL: URLInfo{
 				URL: "https://ilij.li/?param=2",
 			},
 		},
 		{
 			name:    "3",
 			wantErr: true,
-			wantUrl: URLInfo{
+			wantURL: URLInfo{
 				URL: "https://ilij.li/?param=3",
 			},
 		},
 		{
 			name:    "4",
 			wantErr: false,
-			wantUrl: URLInfo{
+			wantURL: URLInfo{
 				URL: "https://ilij.li/?param=4",
 			},
 		},
@@ -289,7 +373,7 @@ func TestGetURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			id := "notfound"
 			if !tt.wantErr {
-				id, _ = UpsertURL(&URLReq{URL: tt.wantUrl.URL}, true, true)
+				id, _ = UpsertURL(&URLReq{URL: tt.wantURL.URL}, true, true)
 			}
 			t.Log("id:", id)
 			gotURL, err := GetURL(id)
@@ -300,8 +384,8 @@ func TestGetURL(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if gotURL.URL != tt.wantUrl.URL {
-				t.Errorf("GetURL() = %v, want %v", gotURL, tt.wantUrl)
+			if gotURL.URL != tt.wantURL.URL {
+				t.Errorf("GetURL() = %v, want %v", gotURL, tt.wantURL)
 			}
 		})
 	}

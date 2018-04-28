@@ -1,18 +1,15 @@
 package iljl
 
 import (
-	"github.com/jbrodriguez/mlog"
 	gonanoid "github.com/matoous/go-nanoid"
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
-// GenerateID generates a new id
-func GenerateID() (shortID string) {
+// generateID generates a new id
+func generateID() (shortID string) {
 	a := internal.Config.ShortID.Alphabet
 	l := internal.Config.ShortID.Length
-	shortID, err := gonanoid.Generate(a, l)
-	if err != nil {
-		mlog.Error(err)
-	}
+	// a and l are validated before
+	shortID, _ = gonanoid.Generate(a, l)
 	return
 }

@@ -39,7 +39,7 @@ func CloseSession() {
 }
 
 // PreprocessURL preprocess and validate url
-func PreprocessURL(url *URLReq, forceAlphabet, forceLength bool) error {
+func PreprocessURL(url *URLReq, forceAlphabet, forceLength bool) (err error) {
 	// chech that the target url is a valid url
 	if _, err := net.ParseRequestURI(url.URL); err != nil {
 		return err
@@ -47,16 +47,16 @@ func PreprocessURL(url *URLReq, forceAlphabet, forceLength bool) error {
 	url.ID = strings.TrimSpace(url.ID)
 	// process url id
 	if len(url.ID) == 0 {
-		url.ID = GenerateID()
+		url.ID = generateID()
 	} else {
-		p := fmt.Sprintf("[%s]", internal.Config.ShortID.Alphabet)
+		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(internal.Config.ShortID.Alphabet))
 		m, _ := regexp.MatchString(p, url.ID)
-		if forceAlphabet && !m {
-			err := fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
+		if forceAlphabet && m {
+			err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
 			return err
 		}
 		if forceLength && len(url.ID) != internal.Config.ShortID.Length {
-			err := fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), internal.Config.ShortID.Length)
+			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), internal.Config.ShortID.Length)
 			return err
 		}
 	}
@@ -96,7 +96,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 		if err != nil {
 			return err
 		}
-		if url.TTL > 0 {
+		if urlInfo.TTL > 0 {
 			d := time.Duration(url.TTL) * time.Second
 			err = txn.SetWithTTL([]byte(url.ID), urlData, d)
 		} else {

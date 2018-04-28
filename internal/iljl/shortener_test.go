@@ -29,7 +29,7 @@ func TestGenerateID(t *testing.T) {
 			},
 		}
 		t.Run(tt.Alphabet, func(t *testing.T) {
-			gotShortID := GenerateID()
+			gotShortID := generateID()
 			if len(gotShortID) != tt.Length {
 				t.Errorf("GenerateID() = %v, len = %v, want %v", gotShortID, len(gotShortID), tt.Length)
 			}

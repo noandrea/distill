@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jbrodriguez/mlog"
 )
@@ -38,8 +40,8 @@ func (c ConfigSchema) Validate() {
 		panic("short_id.length must be at least 3")
 	}
 
-	if len(c.ShortID.Alphabet) < 10 {
-		panic("short_id.alphabet must be at least 10 characters long")
+	if len(c.ShortID.Alphabet) < c.ShortID.Length {
+		panic(fmt.Sprint("short_id.alphabet must be at least ", c.ShortID.Length, " characters long"))
 	}
 }
 
