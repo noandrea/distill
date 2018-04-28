@@ -5,10 +5,13 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/jbrodriguez/mlog"
+
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
 func buildConifgTest() {
+	mlog.Start(mlog.LevelTrace, "")
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
@@ -24,6 +27,7 @@ func buildConifgTest() {
 }
 
 func buildConifgTestShortIDParams(alphabet string, length int) {
+	mlog.Start(mlog.LevelTrace, "")
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
@@ -36,6 +40,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 		},
 	}
 	internal.Config.Validate()
+
 }
 
 func TestPreprocessURL(t *testing.T) {
@@ -132,20 +137,20 @@ func TestUpsertURL(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		url     URLReq
+		url     *URLReq
 		wantErr bool
 	}{
 		{
 			name:    "all good",
 			wantErr: false,
-			url: URLReq{
+			url: &URLReq{
 				URL: "https://ilij.li",
 			},
 		},
 		{
 			name:    "id set",
 			wantErr: false,
-			url: URLReq{
+			url: &URLReq{
 				URL: "https://ilij.li",
 				ID:  "samesame",
 			},
@@ -153,7 +158,7 @@ func TestUpsertURL(t *testing.T) {
 		{
 			name:    "id set",
 			wantErr: false,
-			url: URLReq{
+			url: &URLReq{
 				URL: "https://wikipedia.li",
 				ID:  "samesame",
 			},
@@ -194,13 +199,13 @@ func TestDeleteURL(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		url     URLReq
+		url     *URLReq
 		wantErr bool
 	}{
 		{
 			name:    "id set",
 			wantErr: false,
-			url: URLReq{
+			url: &URLReq{
 				URL:         "https://ilij.li",
 				MaxRequests: 10,
 			},
@@ -284,7 +289,7 @@ func TestGetURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			id := "notfound"
 			if !tt.wantErr {
-				id, _ = UpsertURL(URLReq{URL: tt.wantUrl.URL}, true, true)
+				id, _ = UpsertURL(&URLReq{URL: tt.wantUrl.URL}, true, true)
 			}
 			t.Log("id:", id)
 			gotURL, err := GetURL(id)

@@ -1,15 +1,16 @@
 package iljl
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"time"
+
+	"github.com/jbrodriguez/mlog"
 
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 )
 
@@ -26,6 +27,8 @@ func RegisterEndpoints() (router *chi.Mux) {
 	// through ctx.Done() that the request has timed out and further
 	// processing should be stopped.
 	router.Use(middleware.Timeout(60 * time.Second))
+	// register cors and apiContext middleware
+	router.Use(CORS)
 
 	// redirect root to the configured url
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -34,34 +37,56 @@ func RegisterEndpoints() (router *chi.Mux) {
 	// shortener redirect
 	router.Get("/{ID}", func(w http.ResponseWriter, r *http.Request) {
 		shortID := chi.URLParam(r, "ID")
-		longURL, exists := fmt.Sprint(internal.Config.ShortID.Domain, "/", shortID), false
-		// if the id does not existsk, send 404
-		if !exists {
-			http.Error(w, "URL not found", 404)
+		if urlInfo, err := GetURL(shortID); err == nil {
+			// send redirect
+			http.Redirect(w, r, urlInfo.URL, 302)
 			return
 		}
-		// send redirect
-		http.Redirect(w, r, longURL, 302)
+		http.Error(w, "URL not found", 404)
 	})
 	// handle api requests
 	router.Route("/api", func(r chi.Router) {
-
-		cors := cors.New(cors.Options{
-			AllowedOrigins:   []string{"*"},
-			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-			AllowCredentials: true,
-			MaxAge:           300, // Maximum value not ignored by any of major browsers
-		})
-		// register cors and apiContext middleware
-		r.Use(cors.Handler, apiContext)
+		r.Use(apiContext)
 		// handle global statistics
 		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
 			render.JSON(w, r, "ok")
 		})
+		// handle url statistics
+		r.Get("/stats/{ID}", func(w http.ResponseWriter, r *http.Request) {
+			shortID := chi.URLParam(r, "ID")
+			if urlInfo, err := GetURL(shortID); err == nil {
+				// send redirect
+				render.JSON(w, r, urlInfo)
+				return
+			}
+			http.Error(w, "URL not found", 404)
+		})
 		// handle url setup
 		r.Post("/short", func(w http.ResponseWriter, r *http.Request) {
-			render.JSON(w, r, "ok")
+			urlReq := &URLReq{}
+			if err := render.Bind(r, urlReq); err != nil {
+				render.Render(w, r, ErrInvalidRequest(err))
+				return
+			}
+			// retrieve the forceAlphabet and forceLength
+			forceAlphabet, forceLenght := false, false
+			fA := chi.URLParam(r, "forceAlphabet")
+			fL := chi.URLParam(r, "forceLenght")
+			if fA == "1" {
+				forceAlphabet = true
+			}
+			if fL == "1" {
+				forceLenght = true
+			}
+			// upsert the data
+			id, err := UpsertURL(urlReq, forceAlphabet, forceLenght)
+			mlog.Trace("creted %v", id)
+			// TODO: check the actual error
+			if err != nil {
+				render.Render(w, r, ErrInvalidRequest(err))
+				return
+			}
+			render.JSON(w, r, ShortID{ID: id})
 		})
 
 		// delete an id
@@ -80,6 +105,65 @@ func apiContext(next http.Handler) http.Handler {
 		apiKey := r.Header.Get("X-API-KEY")
 		if apiKey != internal.Config.Server.APIKey {
 			http.Error(w, http.StatusText(403), 403)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Bind on UserPayload will run after the unmarshalling is complete, its
+// a good time to focus some post-processing after a decoding.
+func (u *URLReq) Bind(r *http.Request) error {
+	return nil
+}
+
+// Bind on UserPayload will run after the unmarshalling is complete, its
+// a good time to focus some post-processing after a decoding.
+func (u *ShortID) Bind(r *http.Request) error {
+	return nil
+}
+
+func (u *URLInfo) Bind(r *http.Request) error {
+	return nil
+}
+
+func ErrInvalidRequest(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 400,
+		StatusText:     "Invalid request.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+// ErrResponse renderer type for handling all sorts of errors.
+//
+// In the best case scenario, the excellent github.com/pkg/errors package
+// helps reveal information on the error, setting it on Err, and in the Render()
+// method, using it to set the application-specific error code in AppCode.
+type ErrResponse struct {
+	Err            error `json:"-"` // low-level runtime error
+	HTTPStatusCode int   `json:"-"` // http response status code
+
+	StatusText string `json:"status"`          // user-level status message
+	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
+	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+}
+
+func CORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if r.Method == "OPTIONS" {
+			log.Printf("Should return for OPTIONS")
 			return
 		}
 		next.ServeHTTP(w, r)
