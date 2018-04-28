@@ -2,6 +2,24 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/AndreasBriese/bbloom"
+  packages = ["."]
+  revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
+
+[[projects]]
+  name = "github.com/dgraph-io/badger"
+  packages = [".","options","protos","skl","table","y"]
+  revision = "69611218c7078be6de16f4ea13fb256e701b6b73"
+  version = "v1.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-farm"
+  packages = ["."]
+  revision = "2de33835d10275975374b37b2dcfd22c9020a1f5"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -23,6 +41,12 @@
   name = "github.com/go-chi/render"
   packages = ["."]
   revision = "9f855fadd4b8cde7773f9ef51f6b2705af239519"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
   version = "v1.0.0"
 
 [[projects]]
@@ -68,6 +92,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/spf13/afero"
   packages = [".","mem"]
   revision = "63644898a8da0bc22138abf860edaf5277b6102e"
@@ -105,6 +135,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/net"
+  packages = ["context","internal/timeseries","trace"]
+  revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "cbbc999da32df943dac6cd71eb3ee39e1d7838b9"
@@ -124,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f97fbcf18e3c4d559af21f4e7e6912915831b7da285a1c6822b7a46366027f52"
+  inputs-digest = "2e11a149fa3a3b918d3ad995893962e8c6c6592b879e1dbc58b83d0a30c50125"
   solver-name = "gps-cdcl"
   solver-version = 1
