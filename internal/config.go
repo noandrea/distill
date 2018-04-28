@@ -13,8 +13,8 @@ type ServerConfig struct {
 type ShortIDConfig struct {
 	Alphabet    string `yaml:"alphabet"`
 	Length      int    `yaml:"length"`
-	MaxRequests int    `yaml:"max-requests"`
-	TTL         int    `yaml:"ttl"`
+	MaxRequests int64  `yaml:"max-requests"`
+	TTL         int64  `yaml:"ttl"`
 	Domain      string `yaml:"domain"`
 }
 
