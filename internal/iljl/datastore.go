@@ -31,7 +31,8 @@ func NewSession() {
 	if internal.Config.Server.EnableStats {
 		err = NewStatistics()
 		if err != nil {
-			panic(fmt.Sprintf("cannot start staistics %v", err))
+			mlog.Fatal(err)
+			//panic(fmt.Sprintf("cannot start staistics %v", err))
 		}
 	}
 }
@@ -100,14 +101,13 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 			return err
 		}
 		if urlInfo.TTL > 0 {
-			d := time.Duration(url.TTL) * time.Second
-			err = txn.SetWithTTL([]byte(url.ID), urlData, d)
+			err = txn.SetWithTTL(keyURL(id), urlData, ttl(url.TTL))
 		} else {
-			err = txn.Set([]byte(url.ID), urlData)
+			err = txn.Set(keyURL(id), urlData)
 		}
 		// collect statistics
 		pushEvent(&URLOp{
-			opcode: OpcodeInsert,
+			opcode: opcodeInsert,
 			url:    *urlInfo,
 			err:    err,
 		})
@@ -119,17 +119,22 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 
 // DeleteURL delete a url mapping
 func DeleteURL(id string) (err error) {
-	err = db.Update(func(txn *badger.Txn) error {
-		key := []byte(id)
+	err = db.Update(func(txn *badger.Txn) (err error) {
+		key := keyURL(id)
 		// first check if the url exists
-		_, err = txn.Get(key)
+		_, err = dbGet(txn, key)
 		if err == badger.ErrKeyNotFound {
-			return err
+			return
 		}
-		err := txn.Delete([]byte(id))
+		err = txn.Delete(key)
+		if err != nil {
+			return
+		}
+		// delete the counter and discard the error
+		txn.Delete(keyURLStatCount(id))
 		// collect statistics
 		pushEvent(&URLOp{
-			opcode: OpcodeDelete,
+			opcode: opcodeDelete,
 		})
 		return err
 	})
@@ -137,27 +142,43 @@ func DeleteURL(id string) (err error) {
 }
 
 // GetURL get an url mapping by it's id
-func GetURL(id string) (url URLInfo, err error) {
-	err = db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(id))
-		if err != nil {
-			return err
-		}
-		val, err := item.Value()
+func GetURL(id string, withStats bool) (url URLInfo, err error) {
+	err = db.View(func(txn *badger.Txn) (err error) {
+		val, err := dbGet(txn, keyURL(id))
 		if err != nil {
 			return err
 		}
 		url = URLInfo{}
 		err = url.UnmarshalBinary(val)
+		// if is without statistics push the event and return
+		if !withStats {
+			// collect statistics
+			pushEvent(&URLOp{
+				opcode: opcodeGet,
+				url:    url,
+				err:    err,
+			})
 
-		// collect statistics
-		pushEvent(&URLOp{
-			opcode: OpcodeGet,
-			url:    url,
-			err:    err,
-		})
+			return
+		}
+		// if it is with statistics retrieve the statitsts
+		val, err = dbGet(txn, keyURLStatCount(id))
+		if err != nil {
+			val = numberZero
+		}
+		url.Counter = atoi(val) + 1
+		return
 
-		return err
 	})
+	return
+}
+
+// dbGet helper functin
+func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
+	item, err := txn.Get(k)
+	if err != nil {
+		return
+	}
+	val, err = item.Value()
 	return
 }

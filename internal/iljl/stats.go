@@ -1,7 +1,6 @@
 package iljl
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/jbrodriguez/mlog"
@@ -19,13 +18,13 @@ var (
 	statsKeyGlobalUpdCount []byte
 )
 
-// StartStatistics starts the statistics collector worker pool
+// NewStatistics starts the statistics collector worker pool
 func NewStatistics() (err error) {
 	// initialize stats keys
-	statsKeyGlobalURLCount = []byte("ilij_global_url_count")
-	statsKeyGlobalGetCount = []byte("ilij_global_get_count")
-	statsKeyGlobalDelCount = []byte("ilij_global_del_count")
-	statsKeyGlobalUpdCount = []byte("ilij_global_upd_count")
+	statsKeyGlobalURLCount = keyGlobalStat("ilij_global_url_count")
+	statsKeyGlobalGetCount = keyGlobalStat("ilij_global_get_count")
+	statsKeyGlobalDelCount = keyGlobalStat("ilij_global_del_count")
+	statsKeyGlobalUpdCount = keyGlobalStat("ilij_global_upd_count")
 	// read the current statistics
 	globalStatistics, err = loadGlobalStatistics()
 	if err != nil {
@@ -42,6 +41,7 @@ func NewStatistics() (err error) {
 	return
 }
 
+// GetStats retrieve the global statistics
 func GetStats() (s *Statistics) {
 	return globalStatistics
 }
@@ -61,7 +61,7 @@ func loadGlobalStatistics() (s *Statistics, err error) {
 			if err != nil {
 				return
 			}
-			count = int64(binary.LittleEndian.Uint64(val))
+			count = atoi(val)
 			return
 		}
 
@@ -90,6 +90,7 @@ func loadGlobalStatistics() (s *Statistics, err error) {
 
 func resetGlobalStatistics() (err error) {
 	s := &Statistics{}
+	// run the update
 	err = db.Update(func(txn *badger.Txn) (err error) {
 		set := func(key []byte, v int64) (err error) {
 			err = txn.Set(key, itoa(v))
@@ -99,21 +100,26 @@ func resetGlobalStatistics() (err error) {
 		// find all the urls
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 200
-		opts.PrefetchValues = false
+		opts.PrefetchValues = true
 		it := txn.NewIterator(opts)
 		defer it.Close()
 
-		for it.Rewind(); it.Valid(); it.Next() {
+		ucp := []byte{KeyURLStatCountPrefix}
+		for it.Seek(ucp); it.ValidForPrefix(ucp); it.Next() {
+			v, err := it.Item().Value()
+			if err != nil {
+				v = numberZero
+			}
 			s.Urls++
 			s.Upserts++
+			s.Gets += atoi(v)
 		}
-		// TODO: there are 4 more entries the statistics itselfs
 
 		err = set(statsKeyGlobalURLCount, s.Urls)
 		if err != nil {
 			return
 		}
-		err = set(statsKeyGlobalGetCount, 0)
+		err = set(statsKeyGlobalGetCount, s.Gets)
 		if err != nil {
 			return
 		}
@@ -148,7 +154,7 @@ func processEvents(workerID int) {
 		uo := <-opEventsQueue
 		mlog.Trace("workder id: %d opcode: %d", workerID, uo.opcode)
 		switch uo.opcode {
-		case OpcodeGet:
+		case opcodeGet:
 			db.Update(func(txn *badger.Txn) (err error) {
 				globalStatistics.Gets++
 				// update gets count
@@ -156,9 +162,20 @@ func processEvents(workerID int) {
 				if err != nil {
 					mlog.Error(fmt.Errorf("global stats update error %v ", err))
 				}
+				// update url get count
+				k := keyURLStatCount(uo.url.ID)
+				v, err := dbGet(txn, k)
+				if err != nil {
+					v = numberZero
+				}
+				if uo.url.TTL > 0 {
+					err = txn.SetWithTTL(k, itoa(atoi(v)+1), ttl(uo.url.TTL))
+				} else {
+					err = txn.Set(k, itoa(atoi(v)+1))
+				}
 				return
 			})
-		case OpcodeInsert:
+		case opcodeInsert:
 			db.Update(func(txn *badger.Txn) (err error) {
 				globalStatistics.Urls++
 				globalStatistics.Upserts++
@@ -174,7 +191,7 @@ func processEvents(workerID int) {
 				}
 				return
 			})
-		case OpcodeDelete:
+		case opcodeDelete:
 			db.Update(func(txn *badger.Txn) (err error) {
 				globalStatistics.Urls--
 				globalStatistics.Deletes++
@@ -190,13 +207,9 @@ func processEvents(workerID int) {
 				}
 				return
 			})
+
+			// TODO: run database maintenance here
 		}
 		mlog.Info("staistics are %v", globalStatistics)
 	}
-}
-
-func itoa(i int64) (b []byte) {
-	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(i))
-	return
 }
