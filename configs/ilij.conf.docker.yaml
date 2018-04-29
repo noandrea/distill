@@ -5,6 +5,7 @@ server:
   apiKey: 123123_changeme_changeme
   rootRedirect: https://welance.com
   dbPath: /data/db
+  enableStats: true
 
 # short id configuration
 shortId:

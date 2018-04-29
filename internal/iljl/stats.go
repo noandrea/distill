@@ -1,0 +1,202 @@
+package iljl
+
+import (
+	"encoding/binary"
+	"fmt"
+
+	"github.com/jbrodriguez/mlog"
+
+	"github.com/dgraph-io/badger"
+	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+)
+
+var (
+	opEventsQueue          chan *URLOp
+	globalStatistics       *Statistics
+	statsKeyGlobalURLCount []byte
+	statsKeyGlobalGetCount []byte
+	statsKeyGlobalDelCount []byte
+	statsKeyGlobalUpdCount []byte
+)
+
+// StartStatistics starts the statistics collector worker pool
+func NewStatistics() (err error) {
+	// initialize stats keys
+	statsKeyGlobalURLCount = []byte("ilij_global_url_count")
+	statsKeyGlobalGetCount = []byte("ilij_global_get_count")
+	statsKeyGlobalDelCount = []byte("ilij_global_del_count")
+	statsKeyGlobalUpdCount = []byte("ilij_global_upd_count")
+	// read the current statistics
+	globalStatistics, err = loadGlobalStatistics()
+	if err != nil {
+		return
+	}
+	// Initialize channel of events
+	mlog.Trace("intialize queue size %d", internal.Config.Tuning.StatsEventsQueueSize)
+	opEventsQueue = make(chan *URLOp, internal.Config.Tuning.StatsEventsQueueSize)
+	// start the routines
+	for i := 0; i < internal.Config.Tuning.StatsEventsWorkerNum; i++ {
+		go processEvents(i)
+	}
+
+	return
+}
+
+func GetStats() (s *Statistics) {
+	return globalStatistics
+}
+
+func loadGlobalStatistics() (s *Statistics, err error) {
+	s = &Statistics{}
+	err = db.View(func(txn *badger.Txn) (err error) {
+		g := func(key []byte) (count int64, err error) {
+			item, err := txn.Get(key)
+			if err != nil {
+				if err == badger.ErrKeyNotFound {
+					return 0, nil
+				}
+				return
+			}
+			val, err := item.Value()
+			if err != nil {
+				return
+			}
+			count = int64(binary.LittleEndian.Uint64(val))
+			return
+		}
+
+		s.Urls, err = g(statsKeyGlobalURLCount)
+		if err != nil {
+			return
+		}
+		s.Gets, err = g(statsKeyGlobalGetCount)
+		if err != nil {
+			return
+		}
+		s.Deletes, err = g(statsKeyGlobalDelCount)
+		if err != nil {
+			return
+		}
+		s.Upserts, err = g(statsKeyGlobalUpdCount)
+		if err != nil {
+			return
+		}
+		return
+	})
+	globalStatistics = s
+	mlog.Info("Statistics are %v", s)
+	return
+}
+
+func resetGlobalStatistics() (err error) {
+	s := &Statistics{}
+	err = db.Update(func(txn *badger.Txn) (err error) {
+		set := func(key []byte, v int64) (err error) {
+			err = txn.Set(key, itoa(v))
+			return
+		}
+
+		// find all the urls
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 200
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			s.Urls++
+			s.Upserts++
+		}
+		// TODO: there are 4 more entries the statistics itselfs
+
+		err = set(statsKeyGlobalURLCount, s.Urls)
+		if err != nil {
+			return
+		}
+		err = set(statsKeyGlobalGetCount, 0)
+		if err != nil {
+			return
+		}
+		err = set(statsKeyGlobalDelCount, 0)
+		if err != nil {
+			return
+		}
+		err = set(statsKeyGlobalUpdCount, s.Upserts)
+		if err != nil {
+			return
+		}
+		// update global statistics
+		globalStatistics = s
+		return
+	})
+	if err != nil {
+		mlog.Error(err)
+	}
+	return
+}
+
+// pushEvent in the url operaiton queue
+func pushEvent(urlop *URLOp) {
+	if internal.Config.Server.EnableStats {
+		opEventsQueue <- urlop
+	}
+}
+
+// Process is an implementation of wp.Job.Process()
+func processEvents(workerID int) {
+	for {
+		uo := <-opEventsQueue
+		mlog.Trace("workder id: %d opcode: %d", workerID, uo.opcode)
+		switch uo.opcode {
+		case OpcodeGet:
+			db.Update(func(txn *badger.Txn) (err error) {
+				globalStatistics.Gets++
+				// update gets count
+				err = txn.Set(statsKeyGlobalGetCount, itoa(globalStatistics.Gets))
+				if err != nil {
+					mlog.Error(fmt.Errorf("global stats update error %v ", err))
+				}
+				return
+			})
+		case OpcodeInsert:
+			db.Update(func(txn *badger.Txn) (err error) {
+				globalStatistics.Urls++
+				globalStatistics.Upserts++
+				// update urls count
+				err = txn.Set(statsKeyGlobalURLCount, itoa(globalStatistics.Urls))
+				if err != nil {
+					mlog.Error(fmt.Errorf("global stats update error %v ", err))
+				}
+				// update upserts count
+				err = txn.Set(statsKeyGlobalUpdCount, itoa(globalStatistics.Upserts))
+				if err != nil {
+					mlog.Error(fmt.Errorf("global stats update error %v ", err))
+				}
+				return
+			})
+		case OpcodeDelete:
+			db.Update(func(txn *badger.Txn) (err error) {
+				globalStatistics.Urls--
+				globalStatistics.Deletes++
+				// update urls count
+				err = txn.Set(statsKeyGlobalURLCount, itoa(globalStatistics.Urls))
+				if err != nil {
+					mlog.Error(fmt.Errorf("global stats update error %v ", err))
+				}
+				// update upserts count
+				err = txn.Set(statsKeyGlobalDelCount, itoa(globalStatistics.Deletes))
+				if err != nil {
+					mlog.Error(fmt.Errorf("global stats update error %v ", err))
+				}
+				return
+			})
+		}
+		mlog.Info("staistics are %v", globalStatistics)
+	}
+}
+
+func itoa(i int64) (b []byte) {
+	b = make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(i))
+	return
+}

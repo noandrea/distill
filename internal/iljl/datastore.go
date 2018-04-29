@@ -14,7 +14,6 @@ import (
 
 var (
 	db *badger.DB
-	rq chan ShortID
 )
 
 // NewSession opens the underling storage
@@ -28,9 +27,13 @@ func NewSession() {
 	if err != nil {
 		mlog.Fatal(err)
 	}
-	// TODO: load statistics from the database
-	// initialize channel for request comunication
-	rq = make(chan ShortID)
+	// initialize the worker pool
+	if internal.Config.Server.EnableStats {
+		err = NewStatistics()
+		if err != nil {
+			panic(fmt.Sprintf("cannot start staistics %v", err))
+		}
+	}
 }
 
 // CloseSession closes the underling storage
@@ -102,6 +105,13 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 		} else {
 			err = txn.Set([]byte(url.ID), urlData)
 		}
+		// collect statistics
+		pushEvent(&URLOp{
+			opcode: OpcodeInsert,
+			url:    *urlInfo,
+			err:    err,
+		})
+
 		return err
 	})
 	return
@@ -110,7 +120,18 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 // DeleteURL delete a url mapping
 func DeleteURL(id string) (err error) {
 	err = db.Update(func(txn *badger.Txn) error {
-		return txn.Delete([]byte(id))
+		key := []byte(id)
+		// first check if the url exists
+		_, err = txn.Get(key)
+		if err == badger.ErrKeyNotFound {
+			return err
+		}
+		err := txn.Delete([]byte(id))
+		// collect statistics
+		pushEvent(&URLOp{
+			opcode: OpcodeDelete,
+		})
+		return err
 	})
 	return
 }
@@ -128,6 +149,14 @@ func GetURL(id string) (url URLInfo, err error) {
 		}
 		url = URLInfo{}
 		err = url.UnmarshalBinary(val)
+
+		// collect statistics
+		pushEvent(&URLOp{
+			opcode: OpcodeGet,
+			url:    url,
+			err:    err,
+		})
+
 		return err
 	})
 	return

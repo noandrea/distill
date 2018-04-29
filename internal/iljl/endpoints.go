@@ -51,7 +51,15 @@ func RegisterEndpoints() (router *chi.Mux) {
 		r.Use(apiContext)
 		// handle global statistics
 		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
-			render.JSON(w, r, "ok")
+			render.JSON(w, r, *GetStats())
+		})
+		r.Delete("/stats", func(w http.ResponseWriter, r *http.Request) {
+			err := resetGlobalStatistics()
+			if err != nil {
+				render.Render(w, r, ErrInternalError(err, err.Error()))
+				return
+			}
+			render.JSON(w, r, GetStats())
 		})
 		// handle url statistics
 		r.Get("/stats/{ID}", func(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +75,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 		r.Post("/short", func(w http.ResponseWriter, r *http.Request) {
 			urlReq := &URLReq{}
 			if err := render.Bind(r, urlReq); err != nil {
-				render.Render(w, r, ErrInvalidRequest(err))
+				render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 				return
 			}
 			// retrieve the forceAlphabet and forceLength
@@ -85,7 +93,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 			mlog.Trace("creted %v", id)
 			// TODO: check the actual error
 			if err != nil {
-				render.Render(w, r, ErrInvalidRequest(err))
+				render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 				return
 			}
 			render.JSON(w, r, ShortID{ID: id})
@@ -94,7 +102,12 @@ func RegisterEndpoints() (router *chi.Mux) {
 		// delete an id
 		r.Delete("/short/{ID}", func(w http.ResponseWriter, r *http.Request) {
 			shortID := chi.URLParam(r, "ID")
-			render.JSON(w, r, shortID)
+			err := DeleteURL(shortID)
+			if err != nil {
+				render.Render(w, r, ErrNotFound(err, "URL id not found"))
+				return
+			}
+			render.JSON(w, r, ShortID{ID: shortID})
 		})
 	})
 
@@ -131,18 +144,33 @@ func (u *ShortID) Bind(r *http.Request) error {
 	return nil
 }
 
-// Bind will run after the unmarshalling is complete
-func (u *URLInfo) Bind(r *http.Request) error {
-	return nil
-}
-
 // ErrInvalidRequest render an invalid request
-func ErrInvalidRequest(err error) render.Renderer {
+func ErrInvalidRequest(err error, message string) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 400,
-		StatusText:     "Invalid request.",
-		ErrorText:      err.Error(),
+		HTTPStatusCode: http.StatusBadRequest,
+		AppCode:        http.StatusBadRequest,
+		ErrorText:      message,
+	}
+}
+
+// ErrInternalError render an invalid request
+func ErrInternalError(err error, message string) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusInternalServerError,
+		AppCode:        http.StatusInternalServerError,
+		ErrorText:      message,
+	}
+}
+
+// ErrNotFound render an invalid request
+func ErrNotFound(err error, message string) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusNotFound,
+		AppCode:        http.StatusNotFound,
+		ErrorText:      message,
 	}
 }
 
@@ -161,9 +189,8 @@ type ErrResponse struct {
 	Err            error `json:"-"` // low-level runtime error
 	HTTPStatusCode int   `json:"-"` // http response status code
 
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+	AppCode   int    `json:"code,omitempty"`    // application-specific error code
+	ErrorText string `json:"message,omitempty"` // application-level error message, for debugging
 }
 
 //   ____    ____  _____  ______   ____      ____  _       _______     ________

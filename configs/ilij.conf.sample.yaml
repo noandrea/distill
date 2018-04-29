@@ -5,6 +5,7 @@ server:
   apiKey: naiuraoijodmaojorierjaomdaodorpaokda
   rootRedirect: https://mywebsite.com
   dbPath: ./iljl.db
+  enableStats: true
 
 # short id configuration
 shortId:
@@ -12,6 +13,5 @@ shortId:
   length: 6
   ttl: 0 # 0 means no expiration
   maxRequests: 10 # 0 means no limits
-  domain: iljl.li
 
 

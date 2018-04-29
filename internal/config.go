@@ -14,6 +14,7 @@ type ServerConfig struct {
 	Port         int    `yaml:"port"`
 	RootRedirect string `yaml:"rootRedirect"`
 	DbPath       string `yaml:"dbPath"`
+	EnableStats  bool   `yaml:"enableStats"`
 }
 
 //ShortIDConfig configureaiont for the short id
@@ -22,17 +23,25 @@ type ShortIDConfig struct {
 	Length      int    `yaml:"length"`
 	MaxRequests int64  `yaml:"maxRequests"`
 	TTL         int64  `yaml:"ttl"`
-	Domain      string `yaml:"domain"`
+}
+
+// TuningConfig fine tuning configuration
+type TuningConfig struct {
+	StatsWorkerPoolSize  int `yaml:"statsWorkerPoolSize"`
+	StatsWorkerQueueSize int `yaml:"statsWorkerQueueSize"`
+	StatsEventsWorkerNum int `yaml:"statsEventsWorkerNum"`
+	StatsEventsQueueSize int `yaml:"statsEventsQueueSize"`
 }
 
 // ConfigSchema define the configuration object
 type ConfigSchema struct {
 	Server  ServerConfig  `yaml:"server"`
 	ShortID ShortIDConfig `yaml:"shortId"`
+	Tuning  TuningConfig  `yaml:"tuning"`
 }
 
 //Validate configuration
-func (c ConfigSchema) Validate() {
+func (c *ConfigSchema) Validate() {
 
 	mlog.Trace(spew.Sprint(c))
 
@@ -42,6 +51,22 @@ func (c ConfigSchema) Validate() {
 
 	if len(c.ShortID.Alphabet) < c.ShortID.Length {
 		panic(fmt.Sprint("short_id.alphabet must be at least ", c.ShortID.Length, " characters long"))
+	}
+
+	if c.Tuning.StatsWorkerPoolSize == 0 {
+		c.Tuning.StatsWorkerPoolSize = 1
+	}
+
+	if c.Tuning.StatsWorkerQueueSize == 0 {
+		c.Tuning.StatsWorkerQueueSize = 2
+	}
+
+	if c.Tuning.StatsEventsQueueSize == 0 {
+		c.Tuning.StatsEventsQueueSize = 2048
+	}
+
+	if c.Tuning.StatsEventsWorkerNum == 0 {
+		c.Tuning.StatsEventsWorkerNum = 1
 	}
 }
 

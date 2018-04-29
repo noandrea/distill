@@ -8,6 +8,12 @@
   revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/dgraph-io/badger"
   packages = [".","options","protos","skl","table","y"]
   revision = "69611218c7078be6de16f4ea13fb256e701b6b73"
@@ -30,12 +36,6 @@
   packages = [".","middleware"]
   revision = "e83ac2304db3c50cf03d96a2fcd39009d458bc35"
   version = "v3.3.2"
-
-[[projects]]
-  name = "github.com/go-chi/cors"
-  packages = ["."]
-  revision = "dba6525398619dead495962a916728e7ee2ca322"
-  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/go-chi/render"
@@ -160,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2e11a149fa3a3b918d3ad995893962e8c6c6592b879e1dbc58b83d0a30c50125"
+  inputs-digest = "33e30a7d7f253feb587105e2e0a0ed0074ff1b313cfd24d093c5582e60cd955f"
   solver-name = "gps-cdcl"
   solver-version = 1
