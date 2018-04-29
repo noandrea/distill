@@ -2,6 +2,7 @@ package iljl
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/jbrodriguez/mlog"
 
@@ -10,8 +11,13 @@ import (
 )
 
 var (
-	opEventsQueue          chan *URLOp
-	globalStatistics       *Statistics
+	wg               sync.WaitGroup
+	opEventsQueue    chan *URLOp
+	globalStatistics *Statistics
+	// sytem keys
+	sysKeyPurgeCount []byte
+	sysKeyGCCount    []byte
+	// stats keys
 	statsKeyGlobalURLCount []byte
 	statsKeyGlobalGetCount []byte
 	statsKeyGlobalDelCount []byte
@@ -20,6 +26,9 @@ var (
 
 // NewStatistics starts the statistics collector worker pool
 func NewStatistics() (err error) {
+	// initializae system key
+	sysKeyPurgeCount = keySys("ilij_sys_purge_count")
+	sysKeyGCCount = keySys("ilij_sys_gc_count")
 	// initialize stats keys
 	statsKeyGlobalURLCount = keyGlobalStat("ilij_global_url_count")
 	statsKeyGlobalGetCount = keyGlobalStat("ilij_global_get_count")
@@ -35,10 +44,18 @@ func NewStatistics() (err error) {
 	opEventsQueue = make(chan *URLOp, internal.Config.Tuning.StatsEventsQueueSize)
 	// start the routines
 	for i := 0; i < internal.Config.Tuning.StatsEventsWorkerNum; i++ {
+		wg.Add(1)
 		go processEvents(i)
+
 	}
 
 	return
+}
+
+// StopStatistics stops the statistics
+func StopStatistics() {
+	close(opEventsQueue)
+	wg.Wait()
 }
 
 // GetStats retrieve the global statistics
@@ -143,16 +160,17 @@ func resetGlobalStatistics() (err error) {
 
 // pushEvent in the url operaiton queue
 func pushEvent(urlop *URLOp) {
-	if internal.Config.Server.EnableStats {
-		opEventsQueue <- urlop
-	}
+	opEventsQueue <- urlop
 }
 
 // Process is an implementation of wp.Job.Process()
 func processEvents(workerID int) {
 	for {
-		uo := <-opEventsQueue
-		mlog.Trace("workder id: %d opcode: %d", workerID, uo.opcode)
+		uo, ok := <-opEventsQueue
+		if !ok {
+			break
+		}
+
 		switch uo.opcode {
 		case opcodeGet:
 			db.Update(func(txn *badger.Txn) (err error) {
@@ -168,11 +186,13 @@ func processEvents(workerID int) {
 				if err != nil {
 					v = numberZero
 				}
+				// Set the same ttl in case
 				if uo.url.TTL > 0 {
 					err = txn.SetWithTTL(k, itoa(atoi(v)+1), ttl(uo.url.TTL))
 				} else {
 					err = txn.Set(k, itoa(atoi(v)+1))
 				}
+				// TODO: if the count is > than the maxRequests delete the url
 				return
 			})
 		case opcodeInsert:
@@ -210,6 +230,63 @@ func processEvents(workerID int) {
 
 			// TODO: run database maintenance here
 		}
-		mlog.Info("staistics are %v", globalStatistics)
+		// run the maintenance
+		go runDbMaintenance()
 	}
+	// complete task
+	wg.Done()
+}
+
+// runDbMaintenance
+var maintenanceRunning = false
+
+func runDbMaintenance() {
+	if maintenanceRunning {
+		return
+	}
+
+	maintenanceRunning = true
+	wg.Add(1)
+	// caluclate if gc is necessary
+	deletes := globalStatistics.Deletes
+	gcLimit := internal.Config.Tuning.DbGCDeletesCount
+	gcCount := int64(0)
+	// retrieve the gcCount from the db
+	db.View(func(txn *badger.Txn) (err error) {
+		val, err := dbGet(txn, sysKeyGCCount)
+		if err != nil {
+			val = numberZero
+		}
+		gcCount = atoi(val)
+		return
+	})
+
+	latestGC := gcCount * gcLimit
+	if latestGC > deletes {
+		// there was a reset should reset in the stats
+		gcCount, latestGC = 0, 0
+	}
+
+	if deletes-latestGC > gcLimit {
+		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+		err := db.PurgeOlderVersions()
+		if err != nil {
+			mlog.Warning("Purge db failed %v", err)
+			return
+		}
+		db.RunValueLogGC(internal.Config.Tuning.DbGCDiscardRation)
+		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+		// updaete the gcCount
+		db.Update(func(txn *badger.Txn) (err error) {
+			gcCount++
+			err = txn.Set(sysKeyGCCount, itoa(gcCount))
+			if err != nil {
+				mlog.Warning("Error updating %X : %v", sysKeyGCCount, err)
+			}
+			return
+		})
+		// unlock the maintenance
+		maintenanceRunning = false
+	}
+	wg.Done()
 }

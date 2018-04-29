@@ -14,7 +14,6 @@ type ServerConfig struct {
 	Port         int    `yaml:"port"`
 	RootRedirect string `yaml:"rootRedirect"`
 	DbPath       string `yaml:"dbPath"`
-	EnableStats  bool   `yaml:"enableStats"`
 }
 
 //ShortIDConfig configureaiont for the short id
@@ -27,8 +26,11 @@ type ShortIDConfig struct {
 
 // TuningConfig fine tuning configuration
 type TuningConfig struct {
-	StatsEventsWorkerNum int `yaml:"statsEventsWorkerNum"`
-	StatsEventsQueueSize int `yaml:"statsEventsQueueSize"`
+	StatsEventsWorkerNum int     `yaml:"statsEventsWorkerNum"`
+	StatsEventsQueueSize int     `yaml:"statsEventsQueueSize"`
+	DbPurgeWritesCount   int64   `yaml:"dbPurgeWritesCount"`
+	DbGCDeletesCount     int64   `yaml:"dbGCDeletesCount"`
+	DbGCDiscardRation    float64 `yaml:"dbGCDiscardRation"`
 }
 
 // ConfigSchema define the configuration object
@@ -51,12 +53,24 @@ func (c *ConfigSchema) Validate() {
 		panic(fmt.Sprint("short_id.alphabet must be at least ", c.ShortID.Length, " characters long"))
 	}
 
-	if c.Tuning.StatsEventsQueueSize == 0 {
+	if c.Tuning.StatsEventsQueueSize <= 0 {
 		c.Tuning.StatsEventsQueueSize = 2048
 	}
 
-	if c.Tuning.StatsEventsWorkerNum == 0 {
+	if c.Tuning.StatsEventsWorkerNum <= 0 {
 		c.Tuning.StatsEventsWorkerNum = 1
+	}
+
+	if c.Tuning.DbPurgeWritesCount <= 0 {
+		c.Tuning.DbPurgeWritesCount = 2000
+	}
+
+	if c.Tuning.DbGCDeletesCount <= 0 {
+		c.Tuning.DbGCDeletesCount = 500
+	}
+
+	if c.Tuning.DbGCDiscardRation <= 0 || c.Tuning.DbGCDiscardRation > 1 {
+		c.Tuning.DbGCDiscardRation = 0.5
 	}
 
 }
