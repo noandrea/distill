@@ -27,8 +27,6 @@ type ShortIDConfig struct {
 
 // TuningConfig fine tuning configuration
 type TuningConfig struct {
-	StatsWorkerPoolSize  int `yaml:"statsWorkerPoolSize"`
-	StatsWorkerQueueSize int `yaml:"statsWorkerQueueSize"`
 	StatsEventsWorkerNum int `yaml:"statsEventsWorkerNum"`
 	StatsEventsQueueSize int `yaml:"statsEventsQueueSize"`
 }
@@ -53,14 +51,6 @@ func (c *ConfigSchema) Validate() {
 		panic(fmt.Sprint("short_id.alphabet must be at least ", c.ShortID.Length, " characters long"))
 	}
 
-	if c.Tuning.StatsWorkerPoolSize == 0 {
-		c.Tuning.StatsWorkerPoolSize = 1
-	}
-
-	if c.Tuning.StatsWorkerQueueSize == 0 {
-		c.Tuning.StatsWorkerQueueSize = 2
-	}
-
 	if c.Tuning.StatsEventsQueueSize == 0 {
 		c.Tuning.StatsEventsQueueSize = 2048
 	}
@@ -68,6 +58,7 @@ func (c *ConfigSchema) Validate() {
 	if c.Tuning.StatsEventsWorkerNum == 0 {
 		c.Tuning.StatsEventsWorkerNum = 1
 	}
+
 }
 
 // Config sytem configuration
