@@ -6,13 +6,28 @@ import (
 	"testing"
 
 	"github.com/jbrodriguez/mlog"
-
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
 func buildConifgTest() {
 	mlog.Start(mlog.LevelTrace, "")
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
+	fmt.Println("test db folder is ", path)
+	internal.Config = internal.ConfigSchema{
+		Server: internal.ServerConfig{
+			DbPath: path,
+		},
+		ShortID: internal.ShortIDConfig{
+			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+			Length:   6,
+		},
+	}
+	internal.Config.Validate()
+}
+
+func buildConifgPanicTest() {
+	mlog.Start(mlog.LevelTrace, "")
+	path := " cann not exists / ssa "
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
@@ -296,6 +311,7 @@ func TestDeleteURL(t *testing.T) {
 		},
 	}
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+
 	NewSession()
 	for _, tt := range tests {
 		url := tt.url
@@ -319,7 +335,7 @@ func TestDeleteURL(t *testing.T) {
 			t.Errorf("DeleteURL() not deleted")
 		}
 	}
-	CloseSession()
+
 }
 
 func TestGetURL(t *testing.T) {
