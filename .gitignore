@@ -1,2 +1,5 @@
 configs/shoterner.conf.yaml
 vendor
+iljl.db
+third_party/swagger
+dist
