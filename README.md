@@ -1,4 +1,4 @@
-# iljl.li
+# ilij.li
 
 Another url shortener 
 
@@ -21,6 +21,20 @@ that can be used for specific events.
 
 ## Configuration 
 
+
+
+## Build targets
+
+default 
+
+build (build-dist)
+clean 
+
+docker (docker-build) 
+docker-push 
+docker-run 
+lint 
+test
 
 ## ilij is available as docker image
 
