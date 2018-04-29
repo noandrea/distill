@@ -27,18 +27,17 @@ func NewSession() {
 	if err != nil {
 		mlog.Fatal(err)
 	}
-	// initialize the worker pool
-	if internal.Config.Server.EnableStats {
-		err = NewStatistics()
-		if err != nil {
-			mlog.Fatal(err)
-			//panic(fmt.Sprintf("cannot start staistics %v", err))
-		}
+	// inintialize statistics
+	err = NewStatistics()
+	if err != nil {
+		mlog.Fatal(err)
 	}
+
 }
 
 // CloseSession closes the underling storage
 func CloseSession() {
+	StopStatistics()
 	db.Close()
 }
 

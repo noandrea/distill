@@ -26,6 +26,11 @@ test: test-all
 test-all:
 	@go test -v $(GOPACKAGES)
 
+bench: bench-all
+
+bench-all:
+	@go test -bench -v $(GOPACKAGES)
+
 lint: lint-all
 
 lint-all:

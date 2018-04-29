@@ -3,6 +3,7 @@ package iljl
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"testing"
 
 	"github.com/jbrodriguez/mlog"
@@ -260,6 +261,7 @@ func TestUpsertURL(t *testing.T) {
 	}
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
 	NewSession()
+	defer CloseSession()
 	ids := make(map[string]bool)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -284,12 +286,11 @@ func TestUpsertURL(t *testing.T) {
 	id := "samesame"
 	ur := "https://wikipedia.li"
 
-	ui, _ := GetURL(id)
+	ui, _ := GetURL(id, false)
 	if ui.URL != ur {
 		t.Errorf("UpsertURL()  %v, want %v", ui.URL, ur)
 	}
 
-	CloseSession()
 }
 
 func TestDeleteURL(t *testing.T) {
@@ -313,10 +314,11 @@ func TestDeleteURL(t *testing.T) {
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
 
 	NewSession()
+	defer CloseSession()
 	for _, tt := range tests {
 		url := tt.url
 		id, _ := UpsertURL(url, false, false)
-		ui, _ := GetURL(id)
+		ui, _ := GetURL(id, false)
 
 		if id != ui.ID || url.URL != ui.URL {
 			t.Errorf("DeleteURL()")
@@ -330,7 +332,7 @@ func TestDeleteURL(t *testing.T) {
 			}
 		})
 
-		ui, err := GetURL(id)
+		ui, err := GetURL(id, false)
 		if err == nil {
 			t.Errorf("DeleteURL() not deleted")
 		}
@@ -385,6 +387,7 @@ func TestGetURL(t *testing.T) {
 	}
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
 	NewSession()
+	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id := "notfound"
@@ -392,7 +395,7 @@ func TestGetURL(t *testing.T) {
 				id, _ = UpsertURL(&URLReq{URL: tt.wantURL.URL}, true, true)
 			}
 			t.Log("id:", id)
-			gotURL, err := GetURL(id)
+			gotURL, err := GetURL(id, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -405,5 +408,48 @@ func TestGetURL(t *testing.T) {
 			}
 		})
 	}
-	CloseSession()
+}
+
+func BenchmarkSession(b *testing.B) {
+	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+
+	NewSession()
+	defer CloseSession()
+
+	numIds := 10000 // means 10000
+	var ids []string
+	//generate a bunch of urls
+	ri := rand.Intn(numIds)
+	for i := numIds; i < numIds+ri; i++ {
+		ur := &URLReq{
+			URL: fmt.Sprintf("http://ilij.li/long=%d", i),
+		}
+		id, err := UpsertURL(ur, true, true)
+		if err != nil {
+			b.Error("eror inserting url", err)
+		}
+		ids = append(ids, id)
+	}
+
+	numIds = len(ids)
+
+	b.Run("thet test", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			idx := rand.Intn(numIds)
+			GetURL(ids[idx], false)
+		}
+		b.Log(GetStats())
+	})
+
+	b.Run("thet test", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if 1%10 == 0 {
+				idx := rand.Intn(numIds)
+				DeleteURL(ids[idx])
+			}
+
+		}
+		b.Log(GetStats())
+	})
+
 }

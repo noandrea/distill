@@ -2,6 +2,7 @@ package iljl
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 )
 
@@ -48,6 +49,15 @@ type Statistics struct {
 	Gets    int64 `json:"gets"`
 	Upserts int64 `json:"upserts"`
 	Deletes int64 `json:"deletes"`
+}
+
+func (s Statistics) String() string {
+	return fmt.Sprintf("urls: %d, gets: %d, upserts:%d, deletes:%d",
+		s.Urls,
+		s.Gets,
+		s.Upserts,
+		s.Deletes,
+	)
 }
 
 func ttl(seconds int64) (d time.Duration) {
