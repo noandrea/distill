@@ -2,8 +2,9 @@ FROM alpine:3.7
 
 LABEL author="no.andrea@gmail.com"
 
-COPY ilji /data/ilji
-RUN mkdir /data/db
+RUN ls
+COPY ./dist /data
+RUN mkdir -p /data/db
 
-ENTRYPOINT [ "/data/iliji" ]
+ENTRYPOINT [ "/data/ilij", "-c", "/data/ilij.conf.yaml" ]
 CMD ["start"]
