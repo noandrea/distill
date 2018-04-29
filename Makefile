@@ -52,3 +52,6 @@ docker-push: docker-build
 
 docker-run: 
 	@docker run -p 1804:1804 $(DOCKERIMAGE) 
+
+debug-start:
+	@go run main.go -c configs/ilij.conf.sample.yaml --debug start
