@@ -7,26 +7,33 @@ import (
 )
 
 const (
-	opcodeInsert = 0
-	opcodeGet    = 1
-	opcodeDelete = 2
+	opcodeInsert  = 0
+	opcodeGet     = 1
+	opcodeDelete  = 2
+	opcodeExpired = 3
 )
 
 const (
-	KeySysPrefix          = 0x00
-	KeyStatPrefix         = 0x02
-	KeyURLPrefix          = 0x04
-	KeyURLStatCountPrefix = 0x05
+	keySysPrefix          = 0x00
+	keyStatPrefix         = 0x02
+	keyURLPrefix          = 0x04
+	keyURLStatCountPrefix = 0x05
 )
 
 var (
 	numberZero = itoa(0)
 )
 
+// BinSerializable interface for binary serializable structs
+type BinSerializable interface {
+	MarshalBinary() (data []byte, err error)
+	UnmarshalBinary(data []byte) error
+}
+
 // URLOp to track events on urls
 type URLOp struct {
 	opcode int
-	url    URLInfo
+	url    *URLInfo
 	err    error
 }
 
@@ -60,8 +67,14 @@ func (s Statistics) String() string {
 	)
 }
 
-func ttl(seconds int64) (d time.Duration) {
-	return time.Duration(seconds) * time.Second
+// ExpirationDate return the expiration date of the URLInfo
+func (u URLInfo) ExpirationDate() time.Time {
+	return u.BountAt.Add(time.Duration(u.TTL) * time.Second)
+}
+
+// String reresent
+func (u URLInfo) String() string {
+	return fmt.Sprintf("%v->%v c:%d %v [mr:%d, ttl:%d]", u.ID, u.URL, u.Counter, u.BountAt.Format(time.RFC3339Nano), u.MaxRequests, u.TTL)
 }
 
 func itoa(i int64) (b []byte) {
@@ -83,19 +96,19 @@ func atoi(b []byte) int64 {
 //
 
 func keyURL(id string) (k []byte) {
-	return key(KeyURLPrefix, id)
+	return key(keyURLPrefix, id)
 }
 
 func keyURLStatCount(id string) (k []byte) {
-	return key(KeyURLStatCountPrefix, id)
+	return key(keyURLStatCountPrefix, id)
 }
 
 func keySys(id string) (k []byte) {
-	return key(KeySysPrefix, id)
+	return key(keySysPrefix, id)
 }
 
 func keyGlobalStat(id string) (k []byte) {
-	return key(KeyStatPrefix, id)
+	return key(keyStatPrefix, id)
 }
 
 func key(prefix byte, id string) (k []byte) {

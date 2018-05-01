@@ -39,9 +39,9 @@ func RegisterEndpoints() (router *chi.Mux) {
 	// shortener redirect
 	router.Get("/{ID}", func(w http.ResponseWriter, r *http.Request) {
 		shortID := chi.URLParam(r, "ID")
-		if urlInfo, err := GetURL(shortID, false); err == nil {
+		if targetURL, err := GetURLRedirect(shortID); err == nil {
 			// send redirect
-			http.Redirect(w, r, urlInfo.URL, 302)
+			http.Redirect(w, r, targetURL, 302)
 			return
 		}
 		http.Error(w, "URL not found", 404)
@@ -64,7 +64,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 		// handle url statistics
 		r.Get("/stats/{ID}", func(w http.ResponseWriter, r *http.Request) {
 			shortID := chi.URLParam(r, "ID")
-			if urlInfo, err := GetURL(shortID, true); err == nil {
+			if urlInfo, err := GetURLInfo(shortID); err == nil {
 				// send redirect
 				render.JSON(w, r, urlInfo)
 				return

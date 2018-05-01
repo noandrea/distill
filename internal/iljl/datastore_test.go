@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/jbrodriguez/mlog"
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
@@ -51,12 +52,16 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 			DbPath: path,
 		},
 		ShortID: internal.ShortIDConfig{
-			Alphabet: alphabet,
-			Length:   length,
+			Alphabet:    alphabet,
+			Length:      length,
+			TTL:         0,
+			MaxRequests: 0,
+		},
+		Tuning: internal.TuningConfig{
+			StatsEventsWorkerNum: 20,
 		},
 	}
 	internal.Config.Validate()
-
 }
 
 func TestPreprocessURL(t *testing.T) {
@@ -286,11 +291,10 @@ func TestUpsertURL(t *testing.T) {
 	id := "samesame"
 	ur := "https://wikipedia.li"
 
-	ui, _ := GetURL(id, false)
+	ui, _ := GetURLInfo(id)
 	if ui.URL != ur {
 		t.Errorf("UpsertURL()  %v, want %v", ui.URL, ur)
 	}
-
 }
 
 func TestDeleteURL(t *testing.T) {
@@ -318,7 +322,7 @@ func TestDeleteURL(t *testing.T) {
 	for _, tt := range tests {
 		url := tt.url
 		id, _ := UpsertURL(url, false, false)
-		ui, _ := GetURL(id, false)
+		ui, _ := GetURLInfo(id)
 
 		if id != ui.ID || url.URL != ui.URL {
 			t.Errorf("DeleteURL()")
@@ -332,7 +336,7 @@ func TestDeleteURL(t *testing.T) {
 			}
 		})
 
-		ui, err := GetURL(id, false)
+		ui, err := GetURLInfo(id)
 		if err == nil {
 			t.Errorf("DeleteURL() not deleted")
 		}
@@ -347,42 +351,33 @@ func TestGetURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantURL URLInfo
+		wantURL string
 		wantErr bool
-	}{{
-		name:    "0",
-		wantErr: false,
-		wantURL: URLInfo{
-			URL: "https://ilij.li/?param=0",
+	}{
+		{
+			name:    "0",
+			wantErr: false,
+			wantURL: "https://ilij.li/?param=0",
 		},
-	},
 		{
 			name:    "1",
 			wantErr: false,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=1",
-			},
+			wantURL: "https://ilij.li/?param=1",
 		},
 		{
 			name:    "2",
 			wantErr: false,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=2",
-			},
+			wantURL: "https://ilij.li/?param=2",
 		},
 		{
 			name:    "3",
 			wantErr: true,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=3",
-			},
+			wantURL: "https://ilij.li/?param=3",
 		},
 		{
 			name:    "4",
 			wantErr: false,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=4",
-			},
+			wantURL: "https://ilij.li/?param=4",
 		},
 	}
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
@@ -392,10 +387,10 @@ func TestGetURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			id := "notfound"
 			if !tt.wantErr {
-				id, _ = UpsertURL(&URLReq{URL: tt.wantURL.URL}, true, true)
+				id, _ = UpsertURL(&URLReq{URL: tt.wantURL}, true, true)
 			}
 			t.Log("id:", id)
-			gotURL, err := GetURL(id, false)
+			gotURL, err := GetURLRedirect(id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -403,11 +398,74 @@ func TestGetURL(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if gotURL.URL != tt.wantURL.URL {
+			if gotURL != tt.wantURL {
 				t.Errorf("GetURL() = %v, want %v", gotURL, tt.wantURL)
 			}
 		})
 	}
+}
+
+func TestExpireUrl(t *testing.T) {
+	tests := []struct {
+		name    string
+		param   URLReq
+		wantErr bool
+	}{
+		{
+			name:    "noexpire",
+			wantErr: false,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=noexpire",
+				MaxRequests: 0,
+			},
+		},
+		{
+			name:    "expire1",
+			wantErr: true,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=expire1",
+				MaxRequests: 1,
+			},
+		},
+		{
+			name:    "expire10",
+			wantErr: true,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=expire10",
+				MaxRequests: 10,
+			},
+		},
+	}
+	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	NewSession()
+	defer CloseSession()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, _ := UpsertURL(&tt.param, true, true)
+			// first request
+			_, err := GetURLRedirect(id)
+			// consume all the requests
+			for i := int64(0); i < tt.param.MaxRequests; i++ {
+				GetURLRedirect(id)
+				u, err := GetURLInfo(id)
+				t.Log(u, err)
+			}
+			// this should be a not found now for the expired
+			hasErr := (err != nil)
+			if tt.wantErr != hasErr {
+				t.Errorf("GetURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+	// get the stats
+	time.Sleep(time.Duration(10) * time.Millisecond)
+	s := GetStats()
+	t.Log(s)
+	if s.Urls != 1 {
+		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 1)
+	}
+
 }
 
 func BenchmarkSession(b *testing.B) {
@@ -436,7 +494,7 @@ func BenchmarkSession(b *testing.B) {
 	b.Run("thet test", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			idx := rand.Intn(numIds)
-			GetURL(ids[idx], false)
+			GetURLRedirect(ids[idx])
 		}
 		b.Log(GetStats())
 	})

@@ -1,7 +1,6 @@
 package iljl
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/jbrodriguez/mlog"
@@ -66,38 +65,10 @@ func GetStats() (s *Statistics) {
 func loadGlobalStatistics() (s *Statistics, err error) {
 	s = &Statistics{}
 	err = db.View(func(txn *badger.Txn) (err error) {
-		g := func(key []byte) (count int64, err error) {
-			item, err := txn.Get(key)
-			if err != nil {
-				if err == badger.ErrKeyNotFound {
-					return 0, nil
-				}
-				return
-			}
-			val, err := item.Value()
-			if err != nil {
-				return
-			}
-			count = atoi(val)
-			return
-		}
-
-		s.Urls, err = g(statsKeyGlobalURLCount)
-		if err != nil {
-			return
-		}
-		s.Gets, err = g(statsKeyGlobalGetCount)
-		if err != nil {
-			return
-		}
-		s.Deletes, err = g(statsKeyGlobalDelCount)
-		if err != nil {
-			return
-		}
-		s.Upserts, err = g(statsKeyGlobalUpdCount)
-		if err != nil {
-			return
-		}
+		s.Urls = dbGetInt64(txn, statsKeyGlobalURLCount)
+		s.Gets = dbGetInt64(txn, statsKeyGlobalGetCount)
+		s.Deletes = dbGetInt64(txn, statsKeyGlobalDelCount)
+		s.Upserts = dbGetInt64(txn, statsKeyGlobalUpdCount)
 		return
 	})
 	globalStatistics = s
@@ -109,11 +80,6 @@ func resetGlobalStatistics() (err error) {
 	s := &Statistics{}
 	// run the update
 	err = db.Update(func(txn *badger.Txn) (err error) {
-		set := func(key []byte, v int64) (err error) {
-			err = txn.Set(key, itoa(v))
-			return
-		}
-
 		// find all the urls
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 200
@@ -121,39 +87,28 @@ func resetGlobalStatistics() (err error) {
 		it := txn.NewIterator(opts)
 		defer it.Close()
 
-		ucp := []byte{KeyURLStatCountPrefix}
+		ucp := []byte{keyURLStatCountPrefix}
 		for it.Seek(ucp); it.ValidForPrefix(ucp); it.Next() {
+			s.Urls++
+			s.Upserts++
+			// update gets
 			v, err := it.Item().Value()
 			if err != nil {
 				v = numberZero
 			}
-			s.Urls++
-			s.Upserts++
 			s.Gets += atoi(v)
 		}
 
-		err = set(statsKeyGlobalURLCount, s.Urls)
-		if err != nil {
-			return
-		}
-		err = set(statsKeyGlobalGetCount, s.Gets)
-		if err != nil {
-			return
-		}
-		err = set(statsKeyGlobalDelCount, 0)
-		if err != nil {
-			return
-		}
-		err = set(statsKeyGlobalUpdCount, s.Upserts)
-		if err != nil {
-			return
-		}
+		dbSetInt64(txn, statsKeyGlobalURLCount, s.Urls)
+		dbSetInt64(txn, statsKeyGlobalGetCount, s.Gets)
+		dbSetInt64(txn, statsKeyGlobalDelCount, 0)
+		dbSetInt64(txn, statsKeyGlobalUpdCount, s.Upserts)
 		// update global statistics
 		globalStatistics = s
 		return
 	})
 	if err != nil {
-		mlog.Error(err)
+		mlog.Warning("Error while rest stats %v", err)
 	}
 	return
 }
@@ -161,38 +116,36 @@ func resetGlobalStatistics() (err error) {
 // pushEvent in the url operaiton queue
 func pushEvent(urlop *URLOp) {
 	opEventsQueue <- urlop
+	mlog.Trace("events queue %d/%d", len(opEventsQueue), internal.Config.Tuning.StatsEventsQueueSize)
 }
 
 // Process is an implementation of wp.Job.Process()
 func processEvents(workerID int) {
+	mlog.Trace("Start event processor id: %v", workerID)
 	for {
-		uo, ok := <-opEventsQueue
-		if !ok {
+		uo, isChannelOpen := <-opEventsQueue
+		if !isChannelOpen {
 			break
 		}
 
 		switch uo.opcode {
 		case opcodeGet:
 			db.Update(func(txn *badger.Txn) (err error) {
-				globalStatistics.Gets++
-				// update gets count
-				err = txn.Set(statsKeyGlobalGetCount, itoa(globalStatistics.Gets))
-				if err != nil {
-					mlog.Error(fmt.Errorf("global stats update error %v ", err))
-				}
 				// update url get count
 				k := keyURLStatCount(uo.url.ID)
-				v, err := dbGet(txn, k)
+				requestsCount := dbGetInt64(txn, k) + 1
+				dbSetInt64(txn, k, requestsCount)
+				mlog.Trace("trace: %v  req count %v", uo.url.ID, requestsCount)
+				// update the urlinfo object
+				k = keyURL(uo.url.ID)
+				uo.url.Counter = requestsCount
+				err = dbSetBin(txn, k, uo.url)
 				if err != nil {
-					v = numberZero
+					mlog.Warning("Stats: update urlinfo counter failed %v", err)
 				}
-				// Set the same ttl in case
-				if uo.url.TTL > 0 {
-					err = txn.SetWithTTL(k, itoa(atoi(v)+1), ttl(uo.url.TTL))
-				} else {
-					err = txn.Set(k, itoa(atoi(v)+1))
-				}
-				// TODO: if the count is > than the maxRequests delete the url
+				// update global gets count
+				globalStatistics.Gets++
+				dbSetInt64(txn, statsKeyGlobalGetCount, globalStatistics.Gets)
 				return
 			})
 		case opcodeInsert:
@@ -200,15 +153,9 @@ func processEvents(workerID int) {
 				globalStatistics.Urls++
 				globalStatistics.Upserts++
 				// update urls count
-				err = txn.Set(statsKeyGlobalURLCount, itoa(globalStatistics.Urls))
-				if err != nil {
-					mlog.Error(fmt.Errorf("global stats update error %v ", err))
-				}
+				dbSetInt64(txn, statsKeyGlobalURLCount, globalStatistics.Urls)
 				// update upserts count
-				err = txn.Set(statsKeyGlobalUpdCount, itoa(globalStatistics.Upserts))
-				if err != nil {
-					mlog.Error(fmt.Errorf("global stats update error %v ", err))
-				}
+				dbSetInt64(txn, statsKeyGlobalUpdCount, globalStatistics.Upserts)
 				return
 			})
 		case opcodeDelete:
@@ -216,25 +163,33 @@ func processEvents(workerID int) {
 				globalStatistics.Urls--
 				globalStatistics.Deletes++
 				// update urls count
-				err = txn.Set(statsKeyGlobalURLCount, itoa(globalStatistics.Urls))
-				if err != nil {
-					mlog.Error(fmt.Errorf("global stats update error %v ", err))
-				}
-				// update upserts count
-				err = txn.Set(statsKeyGlobalDelCount, itoa(globalStatistics.Deletes))
-				if err != nil {
-					mlog.Error(fmt.Errorf("global stats update error %v ", err))
-				}
+				dbSetInt64(txn, statsKeyGlobalURLCount, globalStatistics.Urls)
+				// update deletes count
+				dbSetInt64(txn, statsKeyGlobalDelCount, globalStatistics.Deletes)
 				return
 			})
-
-			// TODO: run database maintenance here
+		case opcodeExpired:
+			db.Update(func(txn *badger.Txn) (err error) {
+				globalStatistics.Urls--
+				globalStatistics.Deletes++
+				err = dbDel(txn, keyURLStatCount(uo.url.ID), keyURL(uo.url.ID))
+				if err != nil {
+					mlog.Warning("Stats: delete expired urlinfo failed %v", err)
+				}
+				// update urls count
+				dbSetInt64(txn, statsKeyGlobalURLCount, globalStatistics.Urls)
+				// update deletes count
+				dbSetInt64(txn, statsKeyGlobalDelCount, globalStatistics.Deletes)
+				return
+			})
 		}
 		// run the maintenance
 		go runDbMaintenance()
 	}
 	// complete task
+	mlog.Trace("Stop event processor id: %v", workerID)
 	wg.Done()
+
 }
 
 // runDbMaintenance
@@ -253,11 +208,7 @@ func runDbMaintenance() {
 	gcCount := int64(0)
 	// retrieve the gcCount from the db
 	db.View(func(txn *badger.Txn) (err error) {
-		val, err := dbGet(txn, sysKeyGCCount)
-		if err != nil {
-			val = numberZero
-		}
-		gcCount = atoi(val)
+		gcCount = dbGetInt64(txn, sysKeyGCCount)
 		return
 	})
 
@@ -279,10 +230,7 @@ func runDbMaintenance() {
 		// updaete the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {
 			gcCount++
-			err = txn.Set(sysKeyGCCount, itoa(gcCount))
-			if err != nil {
-				mlog.Warning("Error updating %X : %v", sysKeyGCCount, err)
-			}
+			dbSetInt64(txn, sysKeyGCCount, gcCount)
 			return
 		})
 		// unlock the maintenance

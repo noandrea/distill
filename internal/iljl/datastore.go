@@ -32,7 +32,6 @@ func NewSession() {
 	if err != nil {
 		mlog.Fatal(err)
 	}
-
 }
 
 // CloseSession closes the underling storage
@@ -93,24 +92,17 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 		BountAt:     time.Now(),
 	}
 	// insert/update the mapping
-	err = db.Update(func(txn *badger.Txn) error {
-		var err error
-		urlData, err := urlInfo.MarshalBinary()
+	err = db.Update(func(txn *badger.Txn) (err error) {
+		err = dbSetBin(txn, keyURL(id), urlInfo)
 		if err != nil {
 			return err
-		}
-		if urlInfo.TTL > 0 {
-			err = txn.SetWithTTL(keyURL(id), urlData, ttl(url.TTL))
-		} else {
-			err = txn.Set(keyURL(id), urlData)
 		}
 		// collect statistics
 		pushEvent(&URLOp{
 			opcode: opcodeInsert,
-			url:    *urlInfo,
+			url:    urlInfo,
 			err:    err,
 		})
-
 		return err
 	})
 	return
@@ -125,12 +117,11 @@ func DeleteURL(id string) (err error) {
 		if err == badger.ErrKeyNotFound {
 			return
 		}
-		err = txn.Delete(key)
+		// then delete the keys
+		err = dbDel(txn, key)
 		if err != nil {
 			return
 		}
-		// delete the counter and discard the error
-		txn.Delete(keyURLStatCount(id))
 		// collect statistics
 		pushEvent(&URLOp{
 			opcode: opcodeDelete,
@@ -140,44 +131,118 @@ func DeleteURL(id string) (err error) {
 	return
 }
 
-// GetURL get an url mapping by it's id
-func GetURL(id string, withStats bool) (url URLInfo, err error) {
-	err = db.View(func(txn *badger.Txn) (err error) {
-		val, err := dbGet(txn, keyURL(id))
-		if err != nil {
-			return err
-		}
-		url = URLInfo{}
-		err = url.UnmarshalBinary(val)
-		// if is without statistics push the event and return
-		if !withStats {
-			// collect statistics
-			pushEvent(&URLOp{
-				opcode: opcodeGet,
-				url:    url,
-				err:    err,
-			})
+// GetURLRedirect retrieve the redicrect url associated to an id
+// it also fire an event of tipe opcodeGet
+func GetURLRedirect(id string) (redirectURL string, err error) {
+	urlInfo, err := GetURLInfo(id)
+	if err != nil {
+		return
+	}
+	// collect statistics
+	pushEvent(&URLOp{
+		opcode: opcodeGet,
+		url:    urlInfo,
+		err:    err,
+	})
+	// return the redirectUrl
+	redirectURL = urlInfo.URL
+	return
+}
 
+// GetURLInfo retrieve the url info associated to an id
+func GetURLInfo(id string) (urlInfo *URLInfo, err error) {
+	err = db.View(func(txn *badger.Txn) (err error) {
+		urlInfo = &URLInfo{}
+		err = dbGetBin(txn, keyURL(id), urlInfo)
+		if err != nil {
 			return
 		}
-		// if it is with statistics retrieve the statitsts
-		val, err = dbGet(txn, keyURLStatCount(id))
-		if err != nil {
-			val = numberZero
+		// validate the ttl
+		expired := false
+		if urlInfo.TTL > 0 && time.Now().After(urlInfo.ExpirationDate()) {
+			expired = true
 		}
-		url.Counter = atoi(val) + 1
+		mlog.Trace("GetURLInfo() %v ", urlInfo)
+		// validate the maxRequest limit
+		if urlInfo.MaxRequests > 0 && urlInfo.Counter >= urlInfo.MaxRequests {
+			mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+			expired = true
+		}
+		if expired {
+			err = badger.ErrKeyNotFound
+			// collect statistics
+			pushEvent(&URLOp{
+				opcode: opcodeExpired,
+				url:    urlInfo,
+				err:    err,
+			})
+		}
 		return
-
 	})
 	return
 }
 
 // dbGet helper functin
+
+func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
+	for _, k := range keys {
+		err = txn.Delete(k)
+	}
+	return
+}
+
+func dbSet(txn *badger.Txn, k, val []byte, ttlSeconds int64) (err error) {
+	if ttlSeconds > 0 {
+		err = txn.SetWithTTL(k, val, time.Duration(ttlSeconds)*time.Second)
+	} else {
+		err = txn.Set(k, val)
+	}
+	return
+}
+
+func dbSetInt64(txn *badger.Txn, k []byte, val int64) {
+	err := txn.Set(k, itoa(val))
+	if err != nil {
+		mlog.Warning("update key %X error %v ", k, err)
+	}
+}
+
+func dbSetBin(txn *badger.Txn, k []byte, val BinSerializable) (err error) {
+	binData, err := val.MarshalBinary()
+	if err != nil {
+		return
+	}
+	err = txn.Set(k, binData)
+	return
+}
+
 func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 	item, err := txn.Get(k)
 	if err != nil {
 		return
 	}
 	val, err = item.Value()
+	return
+}
+
+func dbGetInt64(txn *badger.Txn, k []byte) (i int64) {
+	item, err := txn.Get(k)
+	if err != nil {
+		return
+	}
+	val, err := item.Value()
+	if err != nil {
+		val = numberZero
+	}
+	i = atoi(val)
+	return
+}
+
+func dbGetBin(txn *badger.Txn, k []byte, val BinSerializable) (err error) {
+	v, err := dbGet(txn, k)
+	if err != nil {
+		return err
+	}
+	err = val.UnmarshalBinary(v)
 	return
 }
