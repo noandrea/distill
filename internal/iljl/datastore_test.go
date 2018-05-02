@@ -408,12 +408,14 @@ func TestGetURL(t *testing.T) {
 func TestExpireUrl(t *testing.T) {
 	tests := []struct {
 		name    string
+		numrq   int
 		param   URLReq
 		wantErr bool
 	}{
 		{
 			name:    "noexpire",
 			wantErr: false,
+			numrq:   10,
 			param: URLReq{
 				URL:         "https://ilij.li/?param=noexpire",
 				MaxRequests: 0,
@@ -422,6 +424,7 @@ func TestExpireUrl(t *testing.T) {
 		{
 			name:    "expire1",
 			wantErr: true,
+			numrq:   10,
 			param: URLReq{
 				URL:         "https://ilij.li/?param=expire1",
 				MaxRequests: 1,
@@ -430,6 +433,7 @@ func TestExpireUrl(t *testing.T) {
 		{
 			name:    "expire10",
 			wantErr: true,
+			numrq:   11,
 			param: URLReq{
 				URL:         "https://ilij.li/?param=expire10",
 				MaxRequests: 10,
@@ -441,15 +445,17 @@ func TestExpireUrl(t *testing.T) {
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, _ := UpsertURL(&tt.param, true, true)
-			// first request
-			_, err := GetURLRedirect(id)
+			id, err := UpsertURL(&tt.param, true, true)
+			mlog.Info("-- upsert %s --", id)
 			// consume all the requests
-			for i := int64(0); i < tt.param.MaxRequests; i++ {
-				GetURLRedirect(id)
-				u, err := GetURLInfo(id)
-				t.Log(u, err)
+			for i := 0; i < tt.numrq; i++ {
+				_, err = GetURLRedirect(id)
+				mlog.Info("-- get redirect %s --", id)
+				url, _ := GetURLInfo(id)
+				mlog.Info("-- get info %s --", id)
+				mlog.Info("request n:%3d , %+v, %v", i+1, url, err)
 			}
+			mlog.Info("-- << end  %s --", id)
 			// this should be a not found now for the expired
 			hasErr := (err != nil)
 			if tt.wantErr != hasErr {
