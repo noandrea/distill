@@ -12,7 +12,9 @@ import (
 )
 
 func buildConifgTest() {
+	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds
 	mlog.Start(mlog.LevelTrace, "")
+	// path
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
