@@ -144,14 +144,13 @@ func processEvents(workerID int) {
 					mlog.Warning("Stats: update urlinfo counter failed %v", err)
 				}
 				// update global gets count
-				globalStatistics.Gets++
+				globalStatistics.recGet()
 				dbSetInt64(txn, statsKeyGlobalGetCount, globalStatistics.Gets)
 				return
 			})
 		case opcodeInsert:
 			db.Update(func(txn *badger.Txn) (err error) {
-				globalStatistics.Urls++
-				globalStatistics.Upserts++
+				globalStatistics.recUpsert()
 				// update urls count
 				dbSetInt64(txn, statsKeyGlobalURLCount, globalStatistics.Urls)
 				// update upserts count
@@ -160,8 +159,7 @@ func processEvents(workerID int) {
 			})
 		case opcodeDelete:
 			db.Update(func(txn *badger.Txn) (err error) {
-				globalStatistics.Urls--
-				globalStatistics.Deletes++
+				globalStatistics.recDelete()
 				// update urls count
 				dbSetInt64(txn, statsKeyGlobalURLCount, globalStatistics.Urls)
 				// update deletes count
@@ -170,8 +168,12 @@ func processEvents(workerID int) {
 			})
 		case opcodeExpired:
 			db.Update(func(txn *badger.Txn) (err error) {
-				globalStatistics.Urls--
-				globalStatistics.Deletes++
+				// first verify that the url has not been already deleted
+				_, err = dbGet(txn, keyURL(uo.url.ID))
+				if err != nil {
+					return
+				}
+				globalStatistics.recDelete()
 				err = dbDel(txn, keyURLStatCount(uo.url.ID), keyURL(uo.url.ID))
 				if err != nil {
 					mlog.Warning("Stats: delete expired urlinfo failed %v", err)
@@ -190,6 +192,26 @@ func processEvents(workerID int) {
 	mlog.Trace("Stop event processor id: %v", workerID)
 	wg.Done()
 
+}
+
+func (s *Statistics) recUpsert() {
+	s.mutex.Lock()
+	s.Upserts++
+	s.Urls++
+	s.mutex.Unlock()
+}
+
+func (s *Statistics) recDelete() {
+	s.mutex.Lock()
+	s.Deletes++
+	s.Urls--
+	s.mutex.Unlock()
+}
+
+func (s *Statistics) recGet() {
+	s.mutex.Lock()
+	s.Gets++
+	s.mutex.Unlock()
 }
 
 // runDbMaintenance

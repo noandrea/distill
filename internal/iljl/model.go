@@ -3,6 +3,7 @@ package iljl
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -52,6 +53,7 @@ type URLReq struct {
 
 // Statistics contains the global statistics
 type Statistics struct {
+	mutex   sync.Mutex
 	Urls    int64 `json:"urls"`
 	Gets    int64 `json:"gets"`
 	Upserts int64 `json:"upserts"`
@@ -74,7 +76,8 @@ func (u URLInfo) ExpirationDate() time.Time {
 
 // String reresent
 func (u URLInfo) String() string {
-	return fmt.Sprintf("%v->%v c:%d %v [mr:%d, ttl:%d]", u.ID, u.URL, u.Counter, u.BountAt.Format(time.RFC3339Nano), u.MaxRequests, u.TTL)
+	//return fmt.Sprint("%#v", u)
+	return fmt.Sprintf("%v c:%d %v [mr:%d, ttl:%4d] --> %v", u.ID, u.Counter, u.BountAt.Format(time.Stamp), u.MaxRequests, u.TTL, u.URL)
 }
 
 func itoa(i int64) (b []byte) {
