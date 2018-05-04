@@ -12,6 +12,7 @@ const (
 	opcodeGet     = 1
 	opcodeDelete  = 2
 	opcodeExpired = 3
+	opcodeStore   = 4
 )
 
 const (
@@ -45,10 +46,11 @@ type ShortID struct {
 
 // URLReq request from a client to register an url
 type URLReq struct {
-	ID          string `json:"id"`
-	URL         string `json:"url"`
-	TTL         int64  `json:"ttl"`
-	MaxRequests int64  `json:"max_requests"`
+	ID          string    `json:"id"`
+	URL         string    `json:"url"`
+	TTL         int64     `json:"ttl,omitempty"`
+	MaxRequests int64     `json:"max_requests,omitempty"`
+	ExpireOn    time.Time `json:"expire_on,omitempty"`
 }
 
 // Statistics contains the global statistics
@@ -60,7 +62,7 @@ type Statistics struct {
 	Deletes int64 `json:"deletes"`
 }
 
-func (s Statistics) String() string {
+func (s *Statistics) String() string {
 	return fmt.Sprintf("urls: %d, gets: %d, upserts:%d, deletes:%d",
 		s.Urls,
 		s.Gets,
@@ -89,6 +91,9 @@ func itoa(i int64) (b []byte) {
 func atoi(b []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(b))
 }
+
+// ErrURLExpired when url is expired
+var ErrURLExpired = fmt.Errorf("url expired")
 
 //   ___  ____   ________  ____  ____   ______
 //  |_  ||_  _| |_   __  ||_  _||_  _|.' ____ \
