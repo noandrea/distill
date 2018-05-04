@@ -8,10 +8,10 @@
   revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
 
 [[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  branch = "master"
+  name = "github.com/bluele/gcache"
+  packages = ["."]
+  revision = "472614239ac7e5bc6461e237c798a6ebd5aff8c1"
 
 [[projects]]
   name = "github.com/dgraph-io/badger"
@@ -160,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "33e30a7d7f253feb587105e2e0a0ed0074ff1b313cfd24d093c5582e60cd955f"
+  inputs-digest = "5ee0479df6c2e275f98f517a35fd6a5992ab8bf25785e3495e06f4b87167253a"
   solver-name = "gps-cdcl"
   solver-version = 1
