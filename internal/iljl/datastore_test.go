@@ -3,6 +3,7 @@ package iljl
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ func buildConifgTest() {
 }
 
 func buildConifgPanicTest() {
+	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds
 	mlog.Start(mlog.LevelTrace, "")
 	path := " cann not exists / ssa "
 	fmt.Println("test db folder is ", path)
@@ -46,7 +48,8 @@ func buildConifgPanicTest() {
 }
 
 func buildConifgTestShortIDParams(alphabet string, length int) {
-	mlog.Start(mlog.LevelTrace, "")
+	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds
+	mlog.Start(mlog.LevelInfo, "")
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
@@ -64,120 +67,6 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 		},
 	}
 	internal.Config.Validate()
-}
-
-func TestPreprocessURL(t *testing.T) {
-
-	type args struct {
-		forceAlphabet bool
-		forceLength   bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		url     URLReq
-		wantErr bool
-	}{
-		{
-			name:    "all good",
-			wantErr: false,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-			},
-		},
-		{
-			name:    "wrong target url",
-			wantErr: true,
-			args: args{
-				forceAlphabet: false,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "ilij.li",
-			},
-		},
-		{
-			name:    "id set",
-			wantErr: false,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "abcdef",
-			},
-		},
-		{
-			name:    "wrong alphabet",
-			wantErr: true,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "ilcdef",
-			},
-		},
-		{
-			name:    "wrong lenght",
-			wantErr: true,
-			args: args{
-				forceAlphabet: false,
-				forceLength:   true,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "ilc",
-			},
-		},
-		{
-			name:    "wrong lenght and alphabet",
-			wantErr: true,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   true,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "abac$$ai",
-			},
-		},
-	}
-
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
-	for i := range tests {
-		tt := &tests[i]
-		t.Run(tt.name, func(t *testing.T) {
-			t.Log("berore:", tt.url)
-
-			err := PreprocessURL(&tt.url, tt.args.forceAlphabet, tt.args.forceLength)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("PreprocessURL() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				return
-			}
-
-			if tt.args.forceLength && len(tt.url.ID) != internal.Config.ShortID.Length {
-				t.Errorf("PreprocessURL() ID length %v, expected %v ", len(tt.url.ID), internal.Config.ShortID.Length)
-				return
-			}
-
-			if tt.url.ID == "" {
-				t.Errorf("PreprocessURL() empty id ")
-				return
-			}
-		})
-	}
-
 }
 
 func TestUpsertURL(t *testing.T) {
@@ -273,7 +162,7 @@ func TestUpsertURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := UpsertURL(tt.url, tt.args.forceAlphabet, tt.args.forceLength)
-
+			mlog.Info("upsert url %v, %v", id, err)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpsertURL() error = %v, wantErr %v", err, tt.wantErr)
 			}

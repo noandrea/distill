@@ -6,7 +6,7 @@ type URLInfo struct {
   ID            text
 	URL           text
 	Counter       int64
-  TTL           int64
-  MaxRequests   int64
 	BountAt       timestamp
+  MaxRequests   int64
+  ExpireOn      timestamp
 }
