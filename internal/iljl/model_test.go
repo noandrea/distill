@@ -58,17 +58,17 @@ func Test_keyUrl(t *testing.T) {
 	}{
 		{
 			id:    "one",
-			wantK: append([]byte{KeyURLPrefix}, []byte("one")...),
+			wantK: append([]byte{keyURLPrefix}, []byte("one")...),
 			match: true,
 		},
 		{
 			id:    "two",
-			wantK: append([]byte{KeyURLPrefix}, []byte("two")...),
+			wantK: append([]byte{keyURLPrefix}, []byte("two")...),
 			match: true,
 		},
 		{
 			id:    "err",
-			wantK: append([]byte{KeySysPrefix}, []byte("err")...),
+			wantK: append([]byte{keySysPrefix}, []byte("err")...),
 			match: false,
 		},
 	}
@@ -93,17 +93,17 @@ func Test_keySys(t *testing.T) {
 	}{
 		{
 			id:    "one",
-			wantK: append([]byte{KeySysPrefix}, []byte("one")...),
+			wantK: append([]byte{keySysPrefix}, []byte("one")...),
 			match: true,
 		},
 		{
 			id:    "two",
-			wantK: append([]byte{KeySysPrefix}, []byte("two")...),
+			wantK: append([]byte{keySysPrefix}, []byte("two")...),
 			match: true,
 		},
 		{
 			id:    "err",
-			wantK: append([]byte{KeyURLPrefix}, []byte("err")...),
+			wantK: append([]byte{keyURLPrefix}, []byte("err")...),
 			match: false,
 		},
 	}
@@ -128,17 +128,17 @@ func Test_keyGlobalStat(t *testing.T) {
 	}{
 		{
 			id:    "one",
-			wantK: append([]byte{KeyStatPrefix}, []byte("one")...),
+			wantK: append([]byte{keyStatPrefix}, []byte("one")...),
 			match: true,
 		},
 		{
 			id:    "two",
-			wantK: append([]byte{KeyStatPrefix}, []byte("two")...),
+			wantK: append([]byte{keyStatPrefix}, []byte("two")...),
 			match: true,
 		},
 		{
 			id:    "err",
-			wantK: append([]byte{KeyURLPrefix}, []byte("err")...),
+			wantK: append([]byte{keyURLPrefix}, []byte("err")...),
 			match: false,
 		},
 	}
@@ -163,17 +163,17 @@ func Test_keyURLStatCount(t *testing.T) {
 	}{
 		{
 			id:    "one",
-			wantK: append([]byte{KeyURLStatCountPrefix}, []byte("one")...),
+			wantK: append([]byte{keyURLStatCountPrefix}, []byte("one")...),
 			match: true,
 		},
 		{
 			id:    "two",
-			wantK: append([]byte{KeyURLStatCountPrefix}, []byte("two")...),
+			wantK: append([]byte{keyURLStatCountPrefix}, []byte("two")...),
 			match: true,
 		},
 		{
 			id:    "err",
-			wantK: append([]byte{KeyURLPrefix}, []byte("err")...),
+			wantK: append([]byte{keyURLPrefix}, []byte("err")...),
 			match: false,
 		},
 	}
@@ -181,27 +181,6 @@ func Test_keyURLStatCount(t *testing.T) {
 		t.Run(tt.id, func(t *testing.T) {
 			if gotK := keyURLStatCount(tt.id); tt.match != reflect.DeepEqual(gotK, tt.wantK) {
 				t.Errorf("key() = %v, want %v", gotK, tt.wantK)
-			}
-		})
-	}
-}
-
-func Test_ttl(t *testing.T) {
-	tests := []struct {
-		name    string
-		seconds int64
-		wantD   time.Duration
-		match   bool
-	}{
-		{name: "10s", seconds: 10, match: true, wantD: time.Duration(10) * time.Second},
-		{name: "20s", seconds: 20, match: true, wantD: time.Duration(20) * time.Second},
-		{name: "1s", seconds: 1, match: true, wantD: time.Duration(1) * time.Second},
-		{name: "10s", seconds: 10, match: false, wantD: time.Duration(5) * time.Second},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if gotD := ttl(tt.seconds); tt.match == (gotD != tt.wantD) {
-				t.Errorf("ttl() = %v, want %v", gotD, tt.wantD)
 			}
 		})
 	}
@@ -222,6 +201,60 @@ func Test_arrayconv(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotB := atoi(itoa(tt.val)); atoi(itoa(tt.val)) != tt.val {
 				t.Errorf("itoa() = %v, want %v", gotB, tt.val)
+			}
+		})
+	}
+}
+
+func TestURLInfo_ExpirationDate(t *testing.T) {
+
+	d := func(rfc3339Time string) time.Time {
+		pt, _ := time.Parse(time.RFC3339, rfc3339Time)
+		return pt
+	}
+
+	type fields struct {
+		TTL     int64
+		BountAt time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   time.Time
+	}{
+		{
+			name: "30s",
+			fields: fields{
+				TTL:     30,
+				BountAt: d("2018-04-01T15:00:00Z"),
+			},
+			want: d("2018-04-01T15:00:30Z"),
+		},
+		{
+			name: "2h",
+			fields: fields{
+				TTL:     7200,
+				BountAt: d("2018-04-01T15:00:00Z"),
+			},
+			want: d("2018-04-01T17:00:00Z"),
+		},
+		{
+			name: "1d",
+			fields: fields{
+				TTL:     86400,
+				BountAt: d("2018-04-01T15:00:00Z"),
+			},
+			want: d("2018-04-02T15:00:00Z"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := URLInfo{
+				TTL:     tt.fields.TTL,
+				BountAt: tt.fields.BountAt,
+			}
+			if got := u.ExpirationDate(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("URLInfo.ExpirationDate() = %v, want %v", got, tt.want)
 			}
 		})
 	}

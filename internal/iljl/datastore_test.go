@@ -3,15 +3,24 @@ package iljl
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/jbrodriguez/mlog"
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
+func setupLog() {
+	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds
+	//mlog.Start(mlog.LevelTrace, "")
+	mlog.Start(mlog.LevelInfo, "")
+}
+
 func buildConifgTest() {
-	mlog.Start(mlog.LevelTrace, "")
+	setupLog()
+	// path
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
@@ -27,7 +36,7 @@ func buildConifgTest() {
 }
 
 func buildConifgPanicTest() {
-	mlog.Start(mlog.LevelTrace, "")
+	setupLog()
 	path := " cann not exists / ssa "
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
@@ -43,7 +52,7 @@ func buildConifgPanicTest() {
 }
 
 func buildConifgTestShortIDParams(alphabet string, length int) {
-	mlog.Start(mlog.LevelTrace, "")
+	setupLog()
 	path, _ := ioutil.TempDir("/tmp/", "iljl")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
@@ -51,126 +60,38 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 			DbPath: path,
 		},
 		ShortID: internal.ShortIDConfig{
-			Alphabet: alphabet,
-			Length:   length,
+			Alphabet:    alphabet,
+			Length:      length,
+			TTL:         0,
+			MaxRequests: 0,
+		},
+		Tuning: internal.TuningConfig{
+			StatsEventsWorkerNum: 20,
 		},
 	}
 	internal.Config.Validate()
-
 }
 
-func TestPreprocessURL(t *testing.T) {
-
-	type args struct {
-		forceAlphabet bool
-		forceLength   bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		url     URLReq
-		wantErr bool
-	}{
-		{
-			name:    "all good",
-			wantErr: false,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-			},
+func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
+	setupLog()
+	path, _ := ioutil.TempDir("/tmp/", "iljl")
+	fmt.Println("test db folder is ", path)
+	internal.Config = internal.ConfigSchema{
+		Server: internal.ServerConfig{
+			DbPath: path,
 		},
-		{
-			name:    "wrong target url",
-			wantErr: true,
-			args: args{
-				forceAlphabet: false,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "ilij.li",
-			},
+		ShortID: internal.ShortIDConfig{
+			Alphabet:    "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+			Length:      6,
+			TTL:         ttl,
+			MaxRequests: maxr,
+			ExpireOn:    expire,
 		},
-		{
-			name:    "id set",
-			wantErr: false,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "abcdef",
-			},
-		},
-		{
-			name:    "wrong alphabet",
-			wantErr: true,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   false,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "ilcdef",
-			},
-		},
-		{
-			name:    "wrong lenght",
-			wantErr: true,
-			args: args{
-				forceAlphabet: false,
-				forceLength:   true,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "ilc",
-			},
-		},
-		{
-			name:    "wrong lenght and alphabet",
-			wantErr: true,
-			args: args{
-				forceAlphabet: true,
-				forceLength:   true,
-			},
-			url: URLReq{
-				URL: "https://ilij.li",
-				ID:  "abac$$ai",
-			},
+		Tuning: internal.TuningConfig{
+			StatsEventsWorkerNum: 20,
 		},
 	}
-
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
-	for i := range tests {
-		tt := &tests[i]
-		t.Run(tt.name, func(t *testing.T) {
-			t.Log("berore:", tt.url)
-
-			err := PreprocessURL(&tt.url, tt.args.forceAlphabet, tt.args.forceLength)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("PreprocessURL() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				return
-			}
-
-			if tt.args.forceLength && len(tt.url.ID) != internal.Config.ShortID.Length {
-				t.Errorf("PreprocessURL() ID length %v, expected %v ", len(tt.url.ID), internal.Config.ShortID.Length)
-				return
-			}
-
-			if tt.url.ID == "" {
-				t.Errorf("PreprocessURL() empty id ")
-				return
-			}
-		})
-	}
-
+	internal.Config.Validate()
 }
 
 func TestUpsertURL(t *testing.T) {
@@ -184,6 +105,41 @@ func TestUpsertURL(t *testing.T) {
 		wantErr bool
 		args    args
 	}{
+		{
+			name:    "invalid url",
+			wantErr: true,
+			url: &URLReq{
+				URL: "ilij.li",
+			},
+			args: args{
+				forceAlphabet: false,
+				forceLength:   false,
+			},
+		},
+		{
+			name:    "invalid alphabet",
+			wantErr: true,
+			url: &URLReq{
+				URL: "ilij.li",
+				ID:  "abcild",
+			},
+			args: args{
+				forceAlphabet: true,
+				forceLength:   false,
+			},
+		},
+		{
+			name:    "invalid length",
+			wantErr: true,
+			url: &URLReq{
+				URL: "ilij.li",
+				ID:  "abcabcabc",
+			},
+			args: args{
+				forceAlphabet: true,
+				forceLength:   true,
+			},
+		},
 		{
 			name:    "all good",
 			wantErr: false,
@@ -266,7 +222,7 @@ func TestUpsertURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := UpsertURL(tt.url, tt.args.forceAlphabet, tt.args.forceLength)
-
+			mlog.Info("upsert url %v, %v", id, err)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpsertURL() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -286,11 +242,10 @@ func TestUpsertURL(t *testing.T) {
 	id := "samesame"
 	ur := "https://wikipedia.li"
 
-	ui, _ := GetURL(id, false)
+	ui, _ := GetURLInfo(id)
 	if ui.URL != ur {
 		t.Errorf("UpsertURL()  %v, want %v", ui.URL, ur)
 	}
-
 }
 
 func TestDeleteURL(t *testing.T) {
@@ -306,8 +261,7 @@ func TestDeleteURL(t *testing.T) {
 			name:    "id set",
 			wantErr: false,
 			url: &URLReq{
-				URL:         "https://ilij.li",
-				MaxRequests: 10,
+				URL: "https://ilij.li",
 			},
 		},
 	}
@@ -318,13 +272,16 @@ func TestDeleteURL(t *testing.T) {
 	for _, tt := range tests {
 		url := tt.url
 		id, _ := UpsertURL(url, false, false)
-		ui, _ := GetURL(id, false)
+		for i := 0; i < 1; i++ {
+			GetURLRedirect(id)
+		}
+		ui, _ := GetURLInfo(id)
+		mlog.Trace("%#v", ui)
 
 		if id != ui.ID || url.URL != ui.URL {
 			t.Errorf("DeleteURL()")
 			break
 		}
-		t.Log(ui)
 
 		t.Run(tt.name, func(t *testing.T) {
 			if err := DeleteURL(id); (err != nil) != tt.wantErr {
@@ -332,7 +289,7 @@ func TestDeleteURL(t *testing.T) {
 			}
 		})
 
-		ui, err := GetURL(id, false)
+		ui, err := GetURLInfo(id)
 		if err == nil {
 			t.Errorf("DeleteURL() not deleted")
 		}
@@ -347,42 +304,33 @@ func TestGetURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantURL URLInfo
+		wantURL string
 		wantErr bool
-	}{{
-		name:    "0",
-		wantErr: false,
-		wantURL: URLInfo{
-			URL: "https://ilij.li/?param=0",
+	}{
+		{
+			name:    "0",
+			wantErr: false,
+			wantURL: "https://ilij.li/?param=0",
 		},
-	},
 		{
 			name:    "1",
 			wantErr: false,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=1",
-			},
+			wantURL: "https://ilij.li/?param=1",
 		},
 		{
 			name:    "2",
 			wantErr: false,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=2",
-			},
+			wantURL: "https://ilij.li/?param=2",
 		},
 		{
 			name:    "3",
 			wantErr: true,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=3",
-			},
+			wantURL: "https://ilij.li/?param=3",
 		},
 		{
 			name:    "4",
 			wantErr: false,
-			wantURL: URLInfo{
-				URL: "https://ilij.li/?param=4",
-			},
+			wantURL: "https://ilij.li/?param=4",
 		},
 	}
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
@@ -392,10 +340,12 @@ func TestGetURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			id := "notfound"
 			if !tt.wantErr {
-				id, _ = UpsertURL(&URLReq{URL: tt.wantURL.URL}, true, true)
+				id, _ = UpsertURL(&URLReq{URL: tt.wantURL}, true, true)
 			}
 			t.Log("id:", id)
-			gotURL, err := GetURL(id, false)
+			// a short pause to make sure the data is written
+			time.Sleep(time.Duration(10) * time.Millisecond)
+			gotURL, err := GetURLRedirect(id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -403,10 +353,177 @@ func TestGetURL(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if gotURL.URL != tt.wantURL.URL {
+			if gotURL != tt.wantURL {
 				t.Errorf("GetURL() = %v, want %v", gotURL, tt.wantURL)
 			}
 		})
+	}
+}
+
+func TestExpireRequestsUrl(t *testing.T) {
+	tests := []struct {
+		name    string
+		numrq   int
+		param   URLReq
+		wantErr bool
+	}{
+		{
+			name:    "noexpire1",
+			wantErr: false,
+			numrq:   1,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=noexpire",
+				MaxRequests: 1,
+			},
+		},
+		{
+			name:    "expire0",
+			wantErr: true,
+			numrq:   2,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=noexpire",
+				MaxRequests: 1,
+			},
+		},
+		{
+			name:    "noexpire",
+			wantErr: false,
+			numrq:   10,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=noexpire",
+				MaxRequests: 0,
+			},
+		},
+		{
+			name:    "expire1",
+			wantErr: true,
+			numrq:   10,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=expire1",
+				MaxRequests: 1,
+			},
+		},
+		{
+			name:    "expire10",
+			wantErr: true,
+			numrq:   11,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=expire10",
+				MaxRequests: 10,
+			},
+		},
+		{
+			name:    "expire10",
+			wantErr: true,
+			numrq:   21,
+			param: URLReq{
+				URL: "https://ilij.li/?param=expire10",
+			},
+		},
+	}
+	var zeroTime time.Time
+	buildConifgTestExpireParams(0, 20, zeroTime)
+	NewSession()
+	defer CloseSession()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, err := UpsertURL(&tt.param, true, true)
+			mlog.Info("-- >> upsert %s --", id)
+			// consume all the requests
+			for i := 0; i < tt.numrq; i++ {
+				_, err = GetURLRedirect(id)
+				mlog.Info("-- get redirect %s --", id)
+			}
+			mlog.Info("-- << end  %s --", id)
+			// this should be a not found now for the expired
+			hasErr := (err != nil)
+			if tt.wantErr != hasErr {
+				t.Errorf("GetURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+	// get the stats
+	time.Sleep(time.Duration(10) * time.Millisecond)
+	s := GetStats()
+	t.Log(s)
+	if s.Urls != 2 {
+		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 2)
+	}
+}
+
+func TestExpireTTLUrl(t *testing.T) {
+	tests := []struct {
+		name    string
+		wait    int
+		param   URLReq
+		wantErr bool
+	}{
+		{
+			name:    "noexpire",
+			wantErr: false,
+			wait:    1,
+			param: URLReq{
+				URL: "https://ilij.li/?param=noexpire",
+				TTL: 0,
+			},
+		},
+		{
+			name:    "noexpire",
+			wantErr: false,
+			wait:    2,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=noexpire",
+				TTL:         0,
+				MaxRequests: 4,
+			},
+		},
+		{
+			name:    "expire1",
+			wantErr: true,
+			wait:    3,
+			param: URLReq{
+				URL: "https://ilij.li/?param=expire1",
+				TTL: 2,
+			},
+		},
+		{
+			name:    "expire10",
+			wantErr: true,
+			wait:    3,
+			param: URLReq{
+				URL:         "https://ilij.li/?param=expire10",
+				MaxRequests: 2,
+				TTL:         2,
+			},
+		},
+	}
+	var zeroTime time.Time
+	buildConifgTestExpireParams(0, 0, zeroTime)
+	NewSession()
+	defer CloseSession()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, err := UpsertURL(&tt.param, true, true)
+			mlog.Info("-- upsert %s --", id)
+			// consume all the requests
+			time.Sleep(time.Duration(tt.wait) * time.Second)
+			_, err = GetURLRedirect(id)
+			mlog.Info("-- << end  %s --", id)
+			// this should be a not found now for the expired
+			hasErr := (err != nil)
+			if tt.wantErr != hasErr {
+				t.Errorf("GetURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+	// get the stats
+	time.Sleep(time.Duration(10) * time.Millisecond)
+	s := GetStats()
+	t.Log(s)
+	if s.Urls != 2 {
+		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 2)
 	}
 }
 
@@ -436,7 +553,7 @@ func BenchmarkSession(b *testing.B) {
 	b.Run("thet test", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			idx := rand.Intn(numIds)
-			GetURL(ids[idx], false)
+			GetURLRedirect(ids[idx])
 		}
 		b.Log(GetStats())
 	})

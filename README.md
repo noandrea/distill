@@ -15,9 +15,31 @@ that can be used for specific events.
 - chose the alphabet set for the short id
 - chose the length of the short id
 - update an existing short id with a different target url
-- set a time to live for a short id
-- set a limit of how many time a short url can be view
-- set a redirect for the / path
+- set a time to live on short ids (globally or per id) 
+- set a end date on short ids (globabbly or per id)
+- set a request limit on short ids (globally or per id)
+- set a redirect for the `/` path
+- set a redirect url for the expired ids
+- backup urls as csv
+- load urls via csv
+
+## Expiration strategy
+
+There are 3 ways to set an expiration for a short id:
+ - ttl
+ - epiration date
+ - max requests
+
+the three options can be configured globally or per short id, 
+the value specified for the short id takes always precedence over the 
+global configuration
+
+For the *ttl* and the *expiration date* the actual expiration is selected as 
+` max ( creation_date + ttl, expiration date) `
+
+> !!! the expiration is set upon short id creation, changing global configuration 
+> will not affect the short ids already set !!!
+
 
 ## Configuration 
 

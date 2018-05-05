@@ -7,177 +7,129 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgraph-io/badger"
 	"github.com/jbrodriguez/mlog"
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
-var (
-	db *badger.DB
-)
-
-// NewSession opens the underling storage
-func NewSession() {
-	// open the badger database
-	opts := badger.DefaultOptions
-	opts.Dir = internal.Config.Server.DbPath
-	opts.ValueDir = internal.Config.Server.DbPath
-	var err error
-	db, err = badger.Open(opts)
-	if err != nil {
-		mlog.Fatal(err)
-	}
-	// inintialize statistics
-	err = NewStatistics()
-	if err != nil {
-		mlog.Fatal(err)
-	}
-
-}
-
-// CloseSession closes the underling storage
-func CloseSession() {
-	StopStatistics()
-	db.Close()
-}
-
-// PreprocessURL preprocess and validate url
-func PreprocessURL(url *URLReq, forceAlphabet, forceLength bool) (err error) {
+// UpsertURL insert or udpdate a url mapping
+func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err error) {
+	// preprocess the url and generates the id if necessary
 	// chech that the target url is a valid url
-	if _, err := net.ParseRequestURI(url.URL); err != nil {
-		return err
+	if _, err = net.ParseRequestURI(url.URL); err != nil {
+		return
 	}
-	url.ID = strings.TrimSpace(url.ID)
+	// set the binding date
+	u := &URLInfo{
+		BountAt: time.Now(),
+		URL:     url.URL,
+	}
+	// the local expiration always take priority
+	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
+	if u.ExpireOn.IsZero() {
+		// global expiration
+		u.ExpireOn = calculateExpiration(u, internal.Config.ShortID.TTL, internal.Config.ShortID.ExpireOn)
+	}
+	// set max requests, the local version always has priority
+	u.MaxRequests = url.MaxRequests
+	if u.MaxRequests == 0 {
+		u.MaxRequests = internal.Config.ShortID.MaxRequests
+	}
+	// cleanup the string id
+	u.ID = strings.TrimSpace(url.ID)
 	// process url id
-	if len(url.ID) == 0 {
-		url.ID = generateID()
+	if len(u.ID) == 0 {
+		err = Insert(u)
 	} else {
+		// TODO: check longest allowed key in badger
 		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(internal.Config.ShortID.Alphabet))
 		m, _ := regexp.MatchString(p, url.ID)
 		if forceAlphabet && m {
 			err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
-			return err
+			return "", err
 		}
 		if forceLength && len(url.ID) != internal.Config.ShortID.Length {
 			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), internal.Config.ShortID.Length)
-			return err
+			return "", err
 		}
-	}
-	// default ttl
-	if url.TTL == 0 {
-		url.TTL = internal.Config.ShortID.TTL
-	}
-	// default max requests
-	if url.MaxRequests == 0 {
-		url.MaxRequests = internal.Config.ShortID.MaxRequests
+		err = Upsert(u)
 	}
 
-	return nil
-}
-
-// UpsertURL insert or udpdate a url mapping
-func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err error) {
-	// preprocess the url and generates the id if necessary
-	err = PreprocessURL(url, forceAlphabet, forceLength)
-	if err != nil {
-		return
-	}
-	// save the id
-	id = url.ID
-	urlInfo := &URLInfo{
-		ID:          url.ID,
-		URL:         url.URL,
-		TTL:         url.TTL,
-		Counter:     0,
-		MaxRequests: url.MaxRequests,
-		BountAt:     time.Now(),
-	}
-	// insert/update the mapping
-	err = db.Update(func(txn *badger.Txn) error {
-		var err error
-		urlData, err := urlInfo.MarshalBinary()
-		if err != nil {
-			return err
-		}
-		if urlInfo.TTL > 0 {
-			err = txn.SetWithTTL(keyURL(id), urlData, ttl(url.TTL))
-		} else {
-			err = txn.Set(keyURL(id), urlData)
-		}
+	if err == nil {
 		// collect statistics
 		pushEvent(&URLOp{
 			opcode: opcodeInsert,
-			url:    *urlInfo,
+			ID:     u.ID,
 			err:    err,
 		})
+	}
+	return u.ID, err
+}
 
-		return err
-	})
+// calculateExpiration calculate the expiration of a url
+// returns the highest date betwwen the date binding + ttl and the date expiration date
+func calculateExpiration(u *URLInfo, ttl int64, expireDate time.Time) (expire time.Time) {
+	if ttl > 0 {
+		expire = u.BountAt.Add(time.Duration(ttl) * time.Second)
+	}
+	if expireDate.After(expire) {
+		expire = expireDate
+	}
 	return
 }
 
 // DeleteURL delete a url mapping
 func DeleteURL(id string) (err error) {
-	err = db.Update(func(txn *badger.Txn) (err error) {
-		key := keyURL(id)
-		// first check if the url exists
-		_, err = dbGet(txn, key)
-		if err == badger.ErrKeyNotFound {
-			return
-		}
-		err = txn.Delete(key)
-		if err != nil {
-			return
-		}
-		// delete the counter and discard the error
-		txn.Delete(keyURLStatCount(id))
-		// collect statistics
-		pushEvent(&URLOp{
-			opcode: opcodeDelete,
-		})
-		return err
-	})
-	return
-}
-
-// GetURL get an url mapping by it's id
-func GetURL(id string, withStats bool) (url URLInfo, err error) {
-	err = db.View(func(txn *badger.Txn) (err error) {
-		val, err := dbGet(txn, keyURL(id))
-		if err != nil {
-			return err
-		}
-		url = URLInfo{}
-		err = url.UnmarshalBinary(val)
-		// if is without statistics push the event and return
-		if !withStats {
-			// collect statistics
-			pushEvent(&URLOp{
-				opcode: opcodeGet,
-				url:    url,
-				err:    err,
-			})
-
-			return
-		}
-		// if it is with statistics retrieve the statitsts
-		val, err = dbGet(txn, keyURLStatCount(id))
-		if err != nil {
-			val = numberZero
-		}
-		url.Counter = atoi(val) + 1
-		return
-
-	})
-	return
-}
-
-// dbGet helper functin
-func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
-	item, err := txn.Get(k)
+	err = Delete(id)
 	if err != nil {
 		return
 	}
-	val, err = item.Value()
+	// collect statistics
+	pushEvent(&URLOp{
+		opcode: opcodeDelete,
+		ID:     id,
+	})
+	return
+}
+
+// GetURLRedirect retrieve the redicrect url associated to an id
+// it also fire an event of tipe opcodeGet
+func GetURLRedirect(id string) (redirectURL string, err error) {
+	urlInfo, err := Get(id)
+	if err != nil {
+		return
+	}
+	expired := false
+	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
+		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+		expired = true
+	}
+	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
+		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+		expired = true
+	}
+
+	if expired {
+		err = ErrURLExpired // collect statistics
+		pushEvent(&URLOp{
+			opcode: opcodeExpired,
+			ID:     urlInfo.ID,
+			err:    err,
+		})
+		return
+	}
+	// collect statistics
+	pushEvent(&URLOp{
+		opcode: opcodeGet,
+		ID:     urlInfo.ID,
+		err:    err,
+	})
+	// return the redirectUrl
+	redirectURL = urlInfo.URL
+	return
+}
+
+// GetURLInfo retrieve the url info associated to an id
+func GetURLInfo(id string) (urlInfo *URLInfo, err error) {
+	urlInfo, err = Peek(id)
 	return
 }
