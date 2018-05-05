@@ -16,7 +16,7 @@ var (
 func NewSession() {
 	// open the badger database
 	opts := badger.DefaultOptions
-	opts.SyncWrites = false
+	opts.SyncWrites = true
 	opts.Dir = internal.Config.Server.DbPath
 	opts.ValueDir = internal.Config.Server.DbPath
 	var err error
@@ -25,7 +25,7 @@ func NewSession() {
 		mlog.Fatal(err)
 	}
 	// initialzie internal cache
-	uc = gcache.New(20).
+	uc = gcache.New(internal.Config.Tuning.URLCaheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
@@ -75,10 +75,10 @@ func Upsert(u *URLInfo) (err error) {
 	return err
 }
 
-// Get an url from the datastore
-func Get(id string) (u *URLInfo, err error) {
+func Peek(id string) (u *URLInfo, err error) {
 	uic, err := uc.Get(id)
 	if err == gcache.KeyNotFoundError {
+		mlog.Trace("cache miss for %s", id)
 		err = db.View(func(txn *badger.Txn) (err error) {
 			u = &URLInfo{}
 			ku := keyURL(id)
@@ -88,11 +88,17 @@ func Get(id string) (u *URLInfo, err error) {
 			}
 			return
 		})
-		if err != nil {
-			return
-		}
 	} else {
 		u = uic.(*URLInfo)
+	}
+	return
+}
+
+// Get an url from the datastore
+func Get(id string) (u *URLInfo, err error) {
+	u, err = Peek(id)
+	if err != nil {
+		return
 	}
 	// increase the counter
 	u.Counter++
@@ -107,18 +113,12 @@ func Delete(id string) (err error) {
 		uc.Remove(id)
 		// remove from storage
 		key := keyURL(id)
-		// first check if the url exists
-		_, err = dbGet(txn, key)
-		if err == badger.ErrKeyNotFound {
-			return
-		}
 		// then delete the keys
-		err = dbDel(txn, key)
-		if err != nil {
-			return
-		}
+		err = txn.Delete(key)
+		mlog.Trace("Delete() 01 %v", err)
 		return err
 	})
+	mlog.Trace("Delete() 02 %v", err)
 	return
 }
 
@@ -126,12 +126,14 @@ func Delete(id string) (err error) {
 func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
 	for _, k := range keys {
 		err = txn.Delete(k)
+		mlog.Trace("dbDel write %s", k)
 	}
 	return
 }
 
 func dbSetInt64(txn *badger.Txn, k []byte, val int64) {
 	err := txn.Set(k, itoa(val))
+	mlog.Trace("dbSetInt64 write %s", k)
 	if err != nil {
 		mlog.Warning("update key %X error %v ", k, err)
 	}
@@ -143,7 +145,7 @@ func dbSetBin(txn *badger.Txn, k []byte, val BinSerializable) (err error) {
 		return
 	}
 	err = txn.Set(k, binData)
-	mlog.Info("write %s", k)
+	mlog.Trace("dbSetBin write %s", k)
 	return
 }
 

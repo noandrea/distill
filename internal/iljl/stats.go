@@ -1,8 +1,11 @@
 package iljl
 
 import (
+	"fmt"
 	"sync"
+	"time"
 
+	"github.com/bluele/gcache"
 	"github.com/jbrodriguez/mlog"
 
 	"github.com/dgraph-io/badger"
@@ -11,6 +14,7 @@ import (
 
 var (
 	wg               sync.WaitGroup
+	sc               gcache.Cache
 	opEventsQueue    chan *URLOp
 	globalStatistics *Statistics
 	// sytem keys
@@ -38,6 +42,10 @@ func NewStatistics() (err error) {
 	if err != nil {
 		return
 	}
+	// initialzie internal cache to provide idempotency for events
+	sc = gcache.New(internal.Config.Tuning.StatsCaheSize).
+		ARC().
+		Build()
 	// Initialize channel of events
 	mlog.Trace("intialize queue size %d", internal.Config.Tuning.StatsEventsQueueSize)
 	opEventsQueue = make(chan *URLOp, internal.Config.Tuning.StatsEventsQueueSize)
@@ -45,7 +53,6 @@ func NewStatistics() (err error) {
 	for i := 0; i < internal.Config.Tuning.StatsEventsWorkerNum; i++ {
 		wg.Add(1)
 		go processEvents(i)
-
 	}
 
 	return
@@ -53,6 +60,8 @@ func NewStatistics() (err error) {
 
 // StopStatistics stops the statistics
 func StopStatistics() {
+	// stop the running
+	mlog.Info("Stop statistics, lost %d events", len(opEventsQueue))
 	close(opEventsQueue)
 	wg.Wait()
 }
@@ -115,34 +124,34 @@ func resetGlobalStatistics() (err error) {
 
 // pushEvent in the url operaiton queue
 func pushEvent(urlop *URLOp) {
+	switch urlop.opcode {
+	case opcodeDelete, opcodeExpired:
+		key := fmt.Sprint(urlop.opcode, ":", urlop.ID)
+		// if it's in cache do not queue the job
+		if _, err := sc.Get(key); err == nil {
+			return
+		}
+		sc.SetWithExpire(key, nil, time.Duration(60)*time.Second)
+	case opcodeInsert:
+		for _, key := range []int{opcodeDelete, opcodeExpired} {
+			sc.Remove(key)
+		}
+	}
 	opEventsQueue <- urlop
-	mlog.Trace("events queue %d/%d", len(opEventsQueue), internal.Config.Tuning.StatsEventsQueueSize)
 }
 
 // Process is an implementation of wp.Job.Process()
 func processEvents(workerID int) {
-	mlog.Trace("Start event processor id: %v", workerID)
+
 	for {
 		uo, isChannelOpen := <-opEventsQueue
 		if !isChannelOpen {
 			break
 		}
-
+		mlog.Trace(">>> Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 		switch uo.opcode {
 		case opcodeGet:
 			db.Update(func(txn *badger.Txn) (err error) {
-				// update url get count
-				k := keyURLStatCount(uo.url.ID)
-				requestsCount := dbGetInt64(txn, k) + 1
-				dbSetInt64(txn, k, requestsCount)
-				mlog.Trace("trace: %v  req count %v", uo.url.ID, requestsCount)
-				// update the urlinfo object
-				k = keyURL(uo.url.ID)
-				uo.url.Counter = requestsCount
-				err = dbSetBin(txn, k, uo.url)
-				if err != nil {
-					mlog.Warning("Stats: update urlinfo counter failed %v", err)
-				}
 				// update global gets count
 				globalStatistics.recGet()
 				dbSetInt64(txn, statsKeyGlobalGetCount, globalStatistics.Gets)
@@ -169,15 +178,11 @@ func processEvents(workerID int) {
 		case opcodeExpired:
 			db.Update(func(txn *badger.Txn) (err error) {
 				// first verify that the url has not been already deleted
-				_, err = dbGet(txn, keyURL(uo.url.ID))
+				err = Delete(uo.ID)
 				if err != nil {
 					return
 				}
 				globalStatistics.recDelete()
-				err = dbDel(txn, keyURLStatCount(uo.url.ID), keyURL(uo.url.ID))
-				if err != nil {
-					mlog.Warning("Stats: delete expired urlinfo failed %v", err)
-				}
 				// update urls count
 				dbSetInt64(txn, statsKeyGlobalURLCount, globalStatistics.Urls)
 				// update deletes count
@@ -185,6 +190,7 @@ func processEvents(workerID int) {
 				return
 			})
 		}
+		mlog.Trace("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 		// run the maintenance
 		go runDbMaintenance()
 	}

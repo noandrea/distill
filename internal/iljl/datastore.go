@@ -15,8 +15,8 @@ import (
 func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err error) {
 	// preprocess the url and generates the id if necessary
 	// chech that the target url is a valid url
-	if _, err := net.ParseRequestURI(url.URL); err != nil {
-		return "", err
+	if _, err = net.ParseRequestURI(url.URL); err != nil {
+		return
 	}
 	// set the binding date
 	u := &URLInfo{
@@ -61,7 +61,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 		// collect statistics
 		pushEvent(&URLOp{
 			opcode: opcodeInsert,
-			url:    u,
+			ID:     u.ID,
 			err:    err,
 		})
 	}
@@ -71,11 +71,11 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 // calculateExpiration calculate the expiration of a url
 // returns the highest date betwwen the date binding + ttl and the date expiration date
 func calculateExpiration(u *URLInfo, ttl int64, expireDate time.Time) (expire time.Time) {
-	if internal.Config.ShortID.TTL > 0 {
-		expire = u.BountAt.Add(time.Duration(internal.Config.ShortID.TTL) * time.Second)
+	if ttl > 0 {
+		expire = u.BountAt.Add(time.Duration(ttl) * time.Second)
 	}
-	if !internal.Config.ShortID.ExpireOn.After(expire) {
-		expire = internal.Config.ShortID.ExpireOn
+	if expireDate.After(expire) {
+		expire = expireDate
 	}
 	return
 }
@@ -89,6 +89,7 @@ func DeleteURL(id string) (err error) {
 	// collect statistics
 	pushEvent(&URLOp{
 		opcode: opcodeDelete,
+		ID:     id,
 	})
 	return
 }
@@ -96,14 +97,33 @@ func DeleteURL(id string) (err error) {
 // GetURLRedirect retrieve the redicrect url associated to an id
 // it also fire an event of tipe opcodeGet
 func GetURLRedirect(id string) (redirectURL string, err error) {
-	urlInfo, err := GetURLInfo(id)
+	urlInfo, err := Get(id)
 	if err != nil {
+		return
+	}
+	expired := false
+	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
+		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+		expired = true
+	}
+	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
+		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+		expired = true
+	}
+
+	if expired {
+		err = ErrURLExpired // collect statistics
+		pushEvent(&URLOp{
+			opcode: opcodeExpired,
+			ID:     urlInfo.ID,
+			err:    err,
+		})
 		return
 	}
 	// collect statistics
 	pushEvent(&URLOp{
 		opcode: opcodeGet,
-		url:    urlInfo,
+		ID:     urlInfo.ID,
 		err:    err,
 	})
 	// return the redirectUrl
@@ -113,29 +133,6 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 
 // GetURLInfo retrieve the url info associated to an id
 func GetURLInfo(id string) (urlInfo *URLInfo, err error) {
-	urlInfo, err = Get(id)
-	if err != nil {
-		return
-	}
-
-	expired := false
-	if time.Now().After(urlInfo.ExpireOn) {
-		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		expired = true
-	}
-	if urlInfo.Counter > urlInfo.MaxRequests {
-		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		expired = true
-	}
-
-	if expired {
-		err = ErrURLExpired // collect statistics
-		pushEvent(&URLOp{
-			opcode: opcodeExpired,
-			url:    urlInfo,
-			err:    err,
-		})
-	}
+	urlInfo, err = Peek(id)
 	return
-
 }

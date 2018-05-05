@@ -35,7 +35,7 @@ type BinSerializable interface {
 // URLOp to track events on urls
 type URLOp struct {
 	opcode int
-	url    *URLInfo
+	ID     string
 	err    error
 }
 
@@ -79,7 +79,7 @@ func (u URLInfo) ExpirationDate() time.Time {
 // String reresent
 func (u URLInfo) String() string {
 	//return fmt.Sprint("%#v", u)
-	return fmt.Sprintf("%v c:%d %v [mr:%d, ttl:%4d] --> %v", u.ID, u.Counter, u.BountAt.Format(time.Stamp), u.MaxRequests, u.TTL, u.URL)
+	return fmt.Sprintf("%v c:%d %v [mr:%d, exp:%v] --> %v", u.ID, u.Counter, u.BountAt.Format(time.Stamp), u.MaxRequests, u.ExpireOn.Format(time.RFC3339Nano), u.URL)
 }
 
 func itoa(i int64) (b []byte) {
@@ -90,6 +90,20 @@ func itoa(i int64) (b []byte) {
 
 func atoi(b []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(b))
+}
+
+func opcodeToString(opcode int) (label string) {
+	switch opcode {
+	case opcodeInsert:
+		label = "UPS"
+	case opcodeGet:
+		label = "GET"
+	case opcodeDelete:
+		label = "DEL"
+	case opcodeExpired:
+		label = "EXP"
+	}
+	return
 }
 
 // ErrURLExpired when url is expired
