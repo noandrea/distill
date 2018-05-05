@@ -412,15 +412,23 @@ func TestExpireRequestsUrl(t *testing.T) {
 				MaxRequests: 10,
 			},
 		},
+		{
+			name:    "expire10",
+			wantErr: true,
+			numrq:   21,
+			param: URLReq{
+				URL: "https://ilij.li/?param=expire10",
+			},
+		},
 	}
 	var zeroTime time.Time
-	buildConifgTestExpireParams(0, 0, zeroTime)
+	buildConifgTestExpireParams(0, 20, zeroTime)
 	NewSession()
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := UpsertURL(&tt.param, true, true)
-			mlog.Info("-- upsert %s --", id)
+			mlog.Info("-- >> upsert %s --", id)
 			// consume all the requests
 			for i := 0; i < tt.numrq; i++ {
 				_, err = GetURLRedirect(id)
@@ -454,7 +462,7 @@ func TestExpireTTLUrl(t *testing.T) {
 		{
 			name:    "noexpire",
 			wantErr: false,
-			wait:    2,
+			wait:    1,
 			param: URLReq{
 				URL: "https://ilij.li/?param=noexpire",
 				TTL: 0,

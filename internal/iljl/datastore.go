@@ -23,19 +23,16 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err err
 		BountAt: time.Now(),
 		URL:     url.URL,
 	}
-	// global expiration
-	globalExpire := calculateExpiration(u, internal.Config.ShortID.TTL, internal.Config.ShortID.ExpireOn)
-	// local expiration
-	localExpire := calculateExpiration(u, url.TTL, url.ExpireOn)
-	// the expiration with the latest expiration (farthest in the future)
-	u.ExpireOn = globalExpire
-	if localExpire.After(globalExpire) {
-		u.ExpireOn = localExpire
+	// the local expiration always take priority
+	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
+	if u.ExpireOn.IsZero() {
+		// global expiration
+		u.ExpireOn = calculateExpiration(u, internal.Config.ShortID.TTL, internal.Config.ShortID.ExpireOn)
 	}
-	// set max requests
-	u.MaxRequests = internal.Config.ShortID.MaxRequests
-	if url.MaxRequests > u.MaxRequests {
-		u.MaxRequests = url.MaxRequests
+	// set max requests, the local version always has priority
+	u.MaxRequests = url.MaxRequests
+	if u.MaxRequests == 0 {
+		u.MaxRequests = internal.Config.ShortID.MaxRequests
 	}
 	// cleanup the string id
 	u.ID = strings.TrimSpace(url.ID)
