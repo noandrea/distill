@@ -26,13 +26,14 @@ type ShortIDConfig struct {
 
 // TuningConfig fine tuning configuration
 type TuningConfig struct {
-	StatsEventsWorkerNum int     `yaml:"statsEventsWorkerNum"`
-	StatsEventsQueueSize int     `yaml:"statsEventsQueueSize"`
-	StatsCaheSize        int     `yaml:"statsCacheSize"`
-	DbPurgeWritesCount   int64   `yaml:"dbPurgeWritesCount"`
-	DbGCDeletesCount     int64   `yaml:"dbGCDeletesCount"`
-	DbGCDiscardRation    float64 `yaml:"dbGCDiscardRation"`
-	URLCaheSize          int     `yaml:"URLCaheSize"`
+	StatsEventsWorkerNum       int     `yaml:"statsEventsWorkerNum"`
+	StatsEventsQueueSize       int     `yaml:"statsEventsQueueSize"`
+	StatsCaheSize              int     `yaml:"statsCacheSize"`
+	DbPurgeWritesCount         int64   `yaml:"dbPurgeWritesCount"`
+	DbGCDeletesCount           int64   `yaml:"dbGCDeletesCount"`
+	DbGCDiscardRation          float64 `yaml:"dbGCDiscardRation"`
+	URLCaheSize                int     `yaml:"URLCaheSize"`
+	ExportIteratorPrefetchSize int     `yaml:"exportIteratorPrefetchSize"`
 }
 
 // ConfigSchema define the configuration object
@@ -79,6 +80,10 @@ func (c *ConfigSchema) Validate() {
 
 	if c.Tuning.URLCaheSize <= 0 || c.Tuning.URLCaheSize > 1 {
 		c.Tuning.URLCaheSize = 2048
+	}
+
+	if c.Tuning.ExportIteratorPrefetchSize <= 0 || c.Tuning.ExportIteratorPrefetchSize > 1 {
+		c.Tuning.ExportIteratorPrefetchSize = 2048
 	}
 
 }

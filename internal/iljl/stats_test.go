@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func noTest_loadGlobalStatistics(t *testing.T) {
@@ -54,7 +55,7 @@ func noTest_loadGlobalStatistics(t *testing.T) {
 			ids := []string{}
 			// run inserts
 			for i := int64(0); i < tt.wantS.Upserts; i++ {
-				id, err := UpsertURL(&URLReq{URL: fmt.Sprint("http://ilij.il/?long=", i)}, true, true)
+				id, err := UpsertURL(&URLReq{URL: fmt.Sprint("http://ilij.il/?long=", i)}, true, true, time.Now())
 				if err != nil {
 					t.Error(err)
 				}
@@ -132,7 +133,7 @@ func noTest_resetGlobalStatistics(t *testing.T) {
 			ids := []string{}
 			// run inserts
 			for i := int64(0); i < tt.wantS.Upserts; i++ {
-				id, err := UpsertURL(&URLReq{URL: fmt.Sprint("http://ilij.il/?long=", i)}, true, true)
+				id, err := UpsertURL(&URLReq{URL: fmt.Sprint("http://ilij.il/?long=", i)}, true, true, time.Now())
 				if err != nil {
 					t.Error(err)
 				}

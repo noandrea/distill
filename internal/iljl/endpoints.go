@@ -89,7 +89,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 				forceLenght = true
 			}
 			// upsert the data
-			id, err := UpsertURL(urlReq, forceAlphabet, forceLenght)
+			id, err := UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
 			mlog.Trace("creted %v", id)
 			// TODO: check the actual error
 			if err != nil {
