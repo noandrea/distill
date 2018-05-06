@@ -159,7 +159,7 @@ func Backup(outFile string) (err error) {
 
 			// open the iterator
 			opts := badger.DefaultIteratorOptions
-			opts.PrefetchSize = internal.Config.Tuning.ExportIteratorPrefetchSize
+			opts.PrefetchSize = internal.Config.Tuning.BckCSVIterPrefetchSize
 			opts.PrefetchValues = true
 			it := txn.NewIterator(opts)
 			defer it.Close()
