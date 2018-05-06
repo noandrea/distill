@@ -31,6 +31,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 	u := &URLInfo{
 		BountAt: boundAt,
 		URL:     url.URL,
+		TTL:     url.TTL,
 	}
 	// the local expiration always take priority
 	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)

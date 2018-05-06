@@ -55,8 +55,8 @@ type ShortID struct {
 type URLReq struct {
 	ID          string    `json:"id"`
 	URL         string    `json:"url"`
-	TTL         int64     `json:"ttl,omitempty"`
 	MaxRequests int64     `json:"max_requests,omitempty"`
+	TTL         int64     `json:"ttl,omitempty"`
 	ExpireOn    time.Time `json:"expire_on,omitempty"`
 }
 
@@ -130,7 +130,6 @@ func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
 	if u.TTL, err = pInt64(pieces, 5, pl); err != nil {
 		return
 	}
-
 	if u.BountAt, err = pTime(pieces, 6, pl); err != nil {
 		return
 	}
@@ -146,13 +145,10 @@ func (u *URLReq) UnmarshalRecord(pieces []string) (err error) {
 	if u.MaxRequests, err = pInt64(pieces, 2, p); err != nil {
 		return
 	}
-	if u.MaxRequests, err = pInt64(pieces, 3, p); err != nil {
+	if u.TTL, err = pInt64(pieces, 3, p); err != nil {
 		return
 	}
-	if u.TTL, err = pInt64(pieces, 4, p); err != nil {
-		return
-	}
-	if u.ExpireOn, err = pTime(pieces, 5, p); err != nil {
+	if u.ExpireOn, err = pTime(pieces, 4, p); err != nil {
 		return
 	}
 	return
