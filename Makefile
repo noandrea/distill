@@ -2,6 +2,8 @@ GOFILES = $(shell find . -name '*.go' -not -path './vendor/*')
 GOPACKAGES = $(shell go list ./...  | grep -v /vendor/)
 OUTPUTFOLDER = 'dist'
 DOCKERIMAGE = 'welance/ilij'
+OS = linux
+ARCH = amd64
 
 .PHONY: list
 list:
@@ -16,7 +18,7 @@ build: build-dist
 
 build-dist: $(GOFILES)
 	@echo build binary to $(OUTPUTFOLDER)
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o $(OUTPUTFOLDER)/ilij .
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -o $(OUTPUTFOLDER)/ilij .
 	@echo copy resources
 	cp README.md LICENSE configs/ilij.conf.sample.yaml $(OUTPUTFOLDER)
 	@echo done
