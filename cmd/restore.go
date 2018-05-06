@@ -48,12 +48,10 @@ func restore(cmd *cobra.Command, args []string) {
 	if err != nil {
 		mlog.Fatalf("Invalid path %s: %v", backupFile, err)
 	}
-	err = os.MkdirAll(filepath.Dir(abp), os.ModeDir)
-	if err != nil {
-		mlog.Fatalf("Error create backup path to %s: %v", backupFile, err)
+	if _, err := os.Stat(abp); os.IsNotExist(err) {
+		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
 	}
-	err = iljl.Restore(abp)
-	if err != nil {
-		mlog.Fatalf("Error create backup at %s: %v", backupFile, err)
+	if err = iljl.Restore(abp); err != nil {
+		mlog.Fatalf("Error restoring backup from %s: %v", backupFile, err)
 	}
 }
