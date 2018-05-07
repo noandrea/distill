@@ -14,6 +14,8 @@ import (
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
+// UpsertURLSimple insert or updae an url
+// shortcut for UpsertURL(true, true, time.Now())
 func UpsertURLSimple(url *URLReq) (id string, err error) {
 	return UpsertURL(url, true, true, time.Now())
 }

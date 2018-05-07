@@ -86,6 +86,7 @@ func Upsert(u *URLInfo) (err error) {
 	return err
 }
 
+// Peek retrive a url without incrementing the counter
 func Peek(id string) (u *URLInfo, err error) {
 	uic, err := uc.Get(id)
 	if err == gcache.KeyNotFoundError {
@@ -133,7 +134,7 @@ func Delete(id string) (err error) {
 	return
 }
 
-// ExportCsv the database as csv
+// Backup the database as csv
 func Backup(outFile string) (err error) {
 	ext := filepath.Ext(outFile)
 	switch ext {
@@ -187,6 +188,7 @@ func Backup(outFile string) (err error) {
 	return
 }
 
+// Restore the database from a backup file
 func Restore(inFile string) (err error) {
 	ext := filepath.Ext(inFile)
 	switch ext {

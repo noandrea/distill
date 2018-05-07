@@ -136,6 +136,7 @@ func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
 	return
 }
 
+//UnmarshalRecord unmarshal a string array (csv record) to URLReq pointer
 func (u *URLReq) UnmarshalRecord(pieces []string) (err error) {
 	u.URL = pieces[0]
 	p := len(pieces)
@@ -231,6 +232,7 @@ func opcodeToString(opcode int) (label string) {
 // ErrURLExpired when url is expired
 var ErrURLExpired = fmt.Errorf("url expired")
 
+// ErrInvalidBackupRecord when a csv record from backup is different from expected
 var ErrInvalidBackupRecord = fmt.Errorf("Invalid backup record")
 
 //   ___  ____   ________  ____  ____   ______

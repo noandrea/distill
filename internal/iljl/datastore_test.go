@@ -428,13 +428,10 @@ func TestExpireRequestsUrl(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := UpsertURL(&tt.param, true, true, time.Now())
-			mlog.Info("-- >> upsert %s --", id)
 			// consume all the requests
 			for i := 0; i < tt.numrq; i++ {
 				_, err = GetURLRedirect(id)
-				mlog.Info("-- get redirect %s --", id)
 			}
-			mlog.Info("-- << end  %s --", id)
 			// this should be a not found now for the expired
 			hasErr := (err != nil)
 			if tt.wantErr != hasErr {
