@@ -68,5 +68,4 @@ func backup(cmd *cobra.Command, args []string) {
 	if err = iljl.Backup(abp); err != nil {
 		mlog.Fatalf("Error create backup at %s: %v", backupFile, err)
 	}
-
 }

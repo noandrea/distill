@@ -579,16 +579,16 @@ func TestImportCSV(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "100 with ids",
-			args:     args{inFile: "testdata/urls.id.100.csv"},
+			name:     "1123 without ids",
+			args:     args{inFile: "testdata/urls.1123.csv"},
 			wantErr:  false,
-			wantRows: 100,
+			wantRows: 1123,
 		},
 		{
-			name:     "10773 with ids",
-			args:     args{inFile: "testdata/urls.id.10773.csv"},
+			name:     "1123 with ids",
+			args:     args{inFile: "testdata/urls.id.1123.csv"},
 			wantErr:  false,
-			wantRows: 10773,
+			wantRows: 1123,
 		},
 	}
 	for _, tt := range tests {
@@ -603,6 +603,52 @@ func TestImportCSV(t *testing.T) {
 			if gotRows != tt.wantRows {
 				t.Errorf("ImportCSV() = %v, want %v", gotRows, tt.wantRows)
 			}
+		})
+		CloseSession()
+	}
+}
+
+func TestBackupRestore(t *testing.T) {
+	type args struct {
+		bckFile string
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantRows int
+		wantErr  bool
+	}{
+		{
+			name:     "1123 without ids",
+			args:     args{bckFile: "bck.csv"},
+			wantErr:  false,
+			wantRows: 421,
+		},
+		{
+			name:     "1123 with ids",
+			args:     args{bckFile: "bck.bin"},
+			wantErr:  false,
+			wantRows: 321,
+		},
+	}
+	for _, tt := range tests {
+		buildConifgTest()
+		NewSession()
+		t.Run(tt.name, func(t *testing.T) {
+			for i := 0; i < tt.wantRows; i++ {
+				UpsertURLSimple(&URLReq{URL: fmt.Sprintf("http://ex.com/v=%d", i)})
+			}
+			err := Backup(tt.args.bckFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			err = Restore(tt.args.bckFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Restore() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
 		})
 		CloseSession()
 	}

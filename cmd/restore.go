@@ -27,18 +27,13 @@ import (
 var restoreCmd = &cobra.Command{
 	Use:   "restore",
 	Short: "Restore a backup",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: restore,
+	Long:  `The backup has to have been created with the backup command`,
+	Run:   restore,
 }
 
 func init() {
 	RootCmd.AddCommand(restoreCmd)
-	restoreCmd.Flags().StringVarP(&backupFile, "backup-file", "f", "ilij.backu.bin", "Input for restore")
+	restoreCmd.Flags().StringVarP(&backupFile, "backup-file", "f", "ilij.backup.bin", "Input for restore")
 }
 
 func restore(cmd *cobra.Command, args []string) {
