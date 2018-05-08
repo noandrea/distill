@@ -1,0 +1,12 @@
+// Package demo offers a demonstration.
+package iljl
+
+// URLInfo contains the data associated to an id
+type URLInfo struct {
+  ID            text
+	URL           text
+	Counter       int64
+	BountAt       timestamp
+  MaxRequests   int64
+  ExpireOn      timestamp
+}

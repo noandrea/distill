@@ -1,0 +1,20 @@
+
+
+
+POST http://localhost:1804/api/short
+X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda
+Content-Type: application/json
+
+{
+    "url": "https://hackernews.com"
+}
+
+###
+
+GET http://localhost:1804/api/stats/qvadbK
+X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda
+
+###
+
+GET http://localhost:1804/qvadbK
+X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda

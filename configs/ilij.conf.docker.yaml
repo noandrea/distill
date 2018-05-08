@@ -1,0 +1,17 @@
+# server configuration
+server:
+  host: "0.0.0.0"
+  port: 1804
+  apiKey: 123123_changeme_changeme
+  rootRedirect: https://welance.com
+  dbPath: /data/db
+  enableStats: true
+
+# short id configuration
+shortId:
+  alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  length: 6
+  ttl: 0          # default value, 0 means no expiration
+  maxRequests: 0  # default value, 0 means no limits
+
+
