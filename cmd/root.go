@@ -25,7 +25,7 @@ import (
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
-var cfgFile, logFile string
+var cfgFile, logFile, version string
 var profile, debug bool
 
 // RootCmd represents the base command when called without any subcommands
@@ -45,7 +45,8 @@ to quickly create a Cobra application.`,
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(v string) {
+	version = v
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)

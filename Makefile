@@ -1,7 +1,11 @@
 GOFILES = $(shell find . -name '*.go' -not -path './vendor/*')
 GOPACKAGES = $(shell go list ./...  | grep -v /vendor/)
-OUTPUTFOLDER = 'dist'
-DOCKERIMAGE = 'welance/ilij'
+GIT_DESCR = $(shell git describe)
+# build output folder
+OUTPUTFOLDER = dist
+# docker image
+DOCKERIMAGE = welance/ilij
+# build paramters
 OS = linux
 ARCH = amd64
 
@@ -18,7 +22,7 @@ build: build-dist
 
 build-dist: $(GOFILES)
 	@echo build binary to $(OUTPUTFOLDER)
-	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -o $(OUTPUTFOLDER)/ilij .
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags "-X main.Version=$(GIT_DESCR)" -o $(OUTPUTFOLDER)/ilij .
 	@echo copy resources
 	cp README.md LICENSE configs/ilij.conf.sample.yaml $(OUTPUTFOLDER)
 	@echo done
