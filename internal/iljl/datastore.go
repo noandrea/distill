@@ -1,8 +1,11 @@
 package iljl
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	net "net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -11,17 +14,26 @@ import (
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
 )
 
+// UpsertURLSimple insert or updae an url
+// shortcut for UpsertURL(true, true, time.Now())
+func UpsertURLSimple(url *URLReq) (id string, err error) {
+	return UpsertURL(url, true, true, time.Now())
+}
+
 // UpsertURL insert or udpdate a url mapping
-func UpsertURL(url *URLReq, forceAlphabet, forceLength bool) (id string, err error) {
+func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) (id string, err error) {
 	// preprocess the url and generates the id if necessary
 	// chech that the target url is a valid url
 	if _, err = net.ParseRequestURI(url.URL); err != nil {
+		mlog.Info("%s", url.URL)
+		mlog.Error(err)
 		return
 	}
 	// set the binding date
 	u := &URLInfo{
-		BountAt: time.Now(),
+		BountAt: boundAt,
 		URL:     url.URL,
+		TTL:     url.TTL,
 	}
 	// the local expiration always take priority
 	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
@@ -131,5 +143,45 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 // GetURLInfo retrieve the url info associated to an id
 func GetURLInfo(id string) (urlInfo *URLInfo, err error) {
 	urlInfo, err = Peek(id)
+	return
+}
+
+// ImportCSV import urls from a csv file
+func ImportCSV(inFile string) (rows int, err error) {
+	fp, err := os.Open(inFile)
+	if err != nil {
+		return
+	}
+	defer fp.Close()
+	start := time.Now()
+	csvR := csv.NewReader(fp)
+	for {
+		record, err := csvR.Read()
+		if err == io.EOF {
+			mlog.Error(err)
+			break
+		}
+		if err != nil {
+			mlog.Error(err)
+			break
+		}
+		if rows == 0 && record[0] == "url" {
+			// header, skip
+			continue
+		}
+		u := &URLReq{}
+		err = u.UnmarshalRecord(record)
+		if err != nil {
+			mlog.Error(err)
+			break
+		}
+		_, err = UpsertURL(u, false, false, time.Now())
+		if err != nil {
+			mlog.Error(err)
+			break
+		}
+		rows++
+	}
+	mlog.Info("Import complete with %d rows in %s", rows, time.Since(start))
 	return
 }

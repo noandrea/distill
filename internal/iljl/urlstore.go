@@ -1,10 +1,21 @@
 package iljl
 
 import (
+	"encoding/csv"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
 	"github.com/jbrodriguez/mlog"
 	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+)
+
+const (
+	backupExtBin = ".bin"
+	backupExtCsv = ".csv"
 )
 
 var (
@@ -75,6 +86,7 @@ func Upsert(u *URLInfo) (err error) {
 	return err
 }
 
+// Peek retrive a url without incrementing the counter
 func Peek(id string) (u *URLInfo, err error) {
 	uic, err := uc.Get(id)
 	if err == gcache.KeyNotFoundError {
@@ -121,6 +133,103 @@ func Delete(id string) (err error) {
 	mlog.Trace("Delete() 02 %v", err)
 	return
 }
+
+// Backup the database as csv
+func Backup(outFile string) (err error) {
+	ext := filepath.Ext(outFile)
+	switch ext {
+	case backupExtBin:
+		// create output file
+		fp, err := os.Create(outFile)
+		if err != nil {
+			return err
+		}
+		ts, err := db.Backup(fp, 0)
+		mlog.Info("Backup completed at %v", ts)
+	case backupExtCsv:
+		err = db.View(func(txn *badger.Txn) (err error) {
+			// create output file
+			fp, err := os.Create(outFile)
+			if err != nil {
+				return
+			}
+			defer fp.Close()
+			// open the csv writer
+			csvW := csv.NewWriter(fp)
+			defer csvW.Flush()
+
+			// open the iterator
+			opts := badger.DefaultIteratorOptions
+			opts.PrefetchSize = internal.Config.Tuning.BckCSVIterPrefetchSize
+			opts.PrefetchValues = true
+			it := txn.NewIterator(opts)
+			defer it.Close()
+
+			p := []byte{keyURLPrefix}
+			for it.Seek(p); it.ValidForPrefix(p); it.Next() {
+				// retrieve values
+				v, err := it.Item().Value()
+				if err != nil {
+					break
+				}
+				u := &URLInfo{}
+				u.UnmarshalBinary(v)
+				err = csvW.Write(u.MarshalRecord())
+				if err != nil {
+					break
+				}
+			}
+			return
+		})
+	default:
+		err = fmt.Errorf("Unrecoginzed backup format %v", ext)
+		mlog.Warning("Unrecoginzed backup format %v", ext)
+	}
+	return
+}
+
+// Restore the database from a backup file
+func Restore(inFile string) (err error) {
+	ext := filepath.Ext(inFile)
+	switch ext {
+	case backupExtBin:
+		fp, err := os.Open(inFile)
+		if err != nil {
+			return err
+		}
+		db.Load(fp)
+		fp.Close()
+	case backupExtCsv:
+		fp, err := os.Open(inFile)
+		if err != nil {
+			return err
+		}
+		csvR := csv.NewReader(fp)
+		for {
+			record, err := csvR.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				break
+			}
+			u := &URLInfo{}
+			if err = u.UnmarshalRecord(record); err != nil {
+				break
+			}
+			if err = Upsert(u); err != nil {
+				break
+			}
+		}
+		fp.Close()
+	default:
+		err = fmt.Errorf("Unrecoginzed backup format %v", ext)
+		mlog.Warning("Unrecoginzed backup format %v", ext)
+	}
+	return
+}
+
+// Helper fucntions
 
 // dbGet helper functin
 func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {

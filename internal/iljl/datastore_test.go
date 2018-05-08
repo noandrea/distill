@@ -13,7 +13,7 @@ import (
 )
 
 func setupLog() {
-	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds
+	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
 	//mlog.Start(mlog.LevelTrace, "")
 	mlog.Start(mlog.LevelInfo, "")
 }
@@ -221,7 +221,7 @@ func TestUpsertURL(t *testing.T) {
 	ids := make(map[string]bool)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := UpsertURL(tt.url, tt.args.forceAlphabet, tt.args.forceLength)
+			id, err := UpsertURL(tt.url, tt.args.forceAlphabet, tt.args.forceLength, time.Now())
 			mlog.Info("upsert url %v, %v", id, err)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpsertURL() error = %v, wantErr %v", err, tt.wantErr)
@@ -271,7 +271,7 @@ func TestDeleteURL(t *testing.T) {
 	defer CloseSession()
 	for _, tt := range tests {
 		url := tt.url
-		id, _ := UpsertURL(url, false, false)
+		id, _ := UpsertURL(url, false, false, time.Now())
 		for i := 0; i < 1; i++ {
 			GetURLRedirect(id)
 		}
@@ -340,7 +340,7 @@ func TestGetURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			id := "notfound"
 			if !tt.wantErr {
-				id, _ = UpsertURL(&URLReq{URL: tt.wantURL}, true, true)
+				id, _ = UpsertURL(&URLReq{URL: tt.wantURL}, true, true, time.Now())
 			}
 			t.Log("id:", id)
 			// a short pause to make sure the data is written
@@ -427,14 +427,11 @@ func TestExpireRequestsUrl(t *testing.T) {
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := UpsertURL(&tt.param, true, true)
-			mlog.Info("-- >> upsert %s --", id)
+			id, err := UpsertURL(&tt.param, true, true, time.Now())
 			// consume all the requests
 			for i := 0; i < tt.numrq; i++ {
 				_, err = GetURLRedirect(id)
-				mlog.Info("-- get redirect %s --", id)
 			}
-			mlog.Info("-- << end  %s --", id)
 			// this should be a not found now for the expired
 			hasErr := (err != nil)
 			if tt.wantErr != hasErr {
@@ -504,7 +501,7 @@ func TestExpireTTLUrl(t *testing.T) {
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := UpsertURL(&tt.param, true, true)
+			id, err := UpsertURL(&tt.param, true, true, time.Now())
 			mlog.Info("-- upsert %s --", id)
 			// consume all the requests
 			time.Sleep(time.Duration(tt.wait) * time.Second)
@@ -541,7 +538,7 @@ func BenchmarkSession(b *testing.B) {
 		ur := &URLReq{
 			URL: fmt.Sprintf("http://ilij.li/long=%d", i),
 		}
-		id, err := UpsertURL(ur, true, true)
+		id, err := UpsertURL(ur, true, true, time.Now())
 		if err != nil {
 			b.Error("eror inserting url", err)
 		}
@@ -569,4 +566,90 @@ func BenchmarkSession(b *testing.B) {
 		b.Log(GetStats())
 	})
 
+}
+
+func TestImportCSV(t *testing.T) {
+	type args struct {
+		inFile string
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantRows int
+		wantErr  bool
+	}{
+		{
+			name:     "1123 without ids",
+			args:     args{inFile: "testdata/urls.1123.csv"},
+			wantErr:  false,
+			wantRows: 1123,
+		},
+		{
+			name:     "1123 with ids",
+			args:     args{inFile: "testdata/urls.id.1123.csv"},
+			wantErr:  false,
+			wantRows: 1123,
+		},
+	}
+	for _, tt := range tests {
+		buildConifgTest()
+		NewSession()
+		t.Run(tt.name, func(t *testing.T) {
+			gotRows, err := ImportCSV(tt.args.inFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ImportCSV() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotRows != tt.wantRows {
+				t.Errorf("ImportCSV() = %v, want %v", gotRows, tt.wantRows)
+			}
+		})
+		CloseSession()
+	}
+}
+
+func TestBackupRestore(t *testing.T) {
+	type args struct {
+		bckFile string
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantRows int
+		wantErr  bool
+	}{
+		{
+			name:     "1123 without ids",
+			args:     args{bckFile: "bck.csv"},
+			wantErr:  false,
+			wantRows: 421,
+		},
+		{
+			name:     "1123 with ids",
+			args:     args{bckFile: "bck.bin"},
+			wantErr:  false,
+			wantRows: 321,
+		},
+	}
+	for _, tt := range tests {
+		buildConifgTest()
+		NewSession()
+		t.Run(tt.name, func(t *testing.T) {
+			for i := 0; i < tt.wantRows; i++ {
+				UpsertURLSimple(&URLReq{URL: fmt.Sprintf("http://ex.com/v=%d", i)})
+			}
+			err := Backup(tt.args.bckFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			err = Restore(tt.args.bckFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Restore() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+		})
+		CloseSession()
+	}
 }

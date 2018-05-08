@@ -6,8 +6,7 @@ X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda
 Content-Type: application/json
 
 {
-    "url": "https://hackernews.com",
-    "ttl" : 33
+    "url": "https://hackernews.com"
 }
 
 ###
