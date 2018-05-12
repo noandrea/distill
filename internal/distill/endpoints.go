@@ -1,4 +1,4 @@
-package iljl
+package distill
 
 import (
 	"log"
@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"

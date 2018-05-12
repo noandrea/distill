@@ -18,11 +18,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal/iljl"
-
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
+	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/distill/internal/distill"
 )
 
 // startCmd represents the start command
@@ -83,7 +82,7 @@ func start(cmd *cobra.Command, args []string) {
 	mlog.Info("                                        ")
 	mlog.Info("      !!    starting    !!              ")
 
-	iljl.NewSession()
-	r := iljl.RegisterEndpoints()
+	distill.NewSession()
+	r := distill.RegisterEndpoints()
 	http.ListenAndServe(fmt.Sprintf("%s:%d", internal.Config.Server.Host, internal.Config.Server.Port), r)
 }

@@ -4,7 +4,7 @@ server:
   port: 1804
   apiKey: naiuraoijodmaojorierjaomdaodorpaokda
   rootRedirect: https://mywebsite.com
-  dbPath: ./iljl.db
+  dbPath: ./distillill.db
   enableStats: true
 
 # short id configuration

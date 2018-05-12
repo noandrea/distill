@@ -1,4 +1,4 @@
-package iljl
+package distill
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/jbrodriguez/mlog"
 
 	"github.com/dgraph-io/badger"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
 var (

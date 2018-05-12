@@ -20,7 +20,7 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal/iljl"
+	"gitlab.com/welance/distill/internal/distill"
 )
 
 // restoreCmd represents the restore command
@@ -37,8 +37,8 @@ func init() {
 }
 
 func restore(cmd *cobra.Command, args []string) {
-	iljl.NewSession()
-	defer iljl.CloseSession()
+	distill.NewSession()
+	defer distill.CloseSession()
 	abp, err := filepath.Abs(backupFile)
 	if err != nil {
 		mlog.Fatalf("Invalid path %s: %v", backupFile, err)
@@ -46,7 +46,7 @@ func restore(cmd *cobra.Command, args []string) {
 	if _, err := os.Stat(abp); os.IsNotExist(err) {
 		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
 	}
-	if err = iljl.Restore(abp); err != nil {
+	if err = distill.Restore(abp); err != nil {
 		mlog.Fatalf("Error restoring backup from %s: %v", backupFile, err)
 	}
 }

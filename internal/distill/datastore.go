@@ -1,4 +1,4 @@
-package iljl
+package distill
 
 import (
 	"encoding/csv"
@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
 // UpsertURLSimple insert or updae an url

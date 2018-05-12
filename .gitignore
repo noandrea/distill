@@ -1,5 +1,5 @@
 configs/shoterner.conf.yaml
 vendor
-iljl.db
+distill.db
 third_party/swagger
 dist

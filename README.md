@@ -1,4 +1,4 @@
-# ilij.li
+# distill
 
 Another url shortener 
 
@@ -6,7 +6,7 @@ Another url shortener
 
 the available url shortener are not suitable for a private deploy use or are too complex in terms of requirements.
 
-ilij aims to create a easy deployable short url service
+*Distill* aims to create a easy deployable short url service
 that can be used for specific events.
 
 
@@ -90,9 +90,9 @@ docker-run
 lint 
 test
 
-## ilij is available as docker image
+*D#* distill is available as docker image
 
-`docker run welance/ilij`
+*D*docker run welance/distill`
 
 ## Development
 to generate the Colfer model run 

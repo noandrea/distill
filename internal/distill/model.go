@@ -1,4 +1,4 @@
-package iljl
+package distill
 
 import (
 	"encoding/binary"
