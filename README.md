@@ -1,10 +1,10 @@
-# distill
+# Distill
 
 Another url shortener 
 
 ## Motivations
 
-the available url shortener are not suitable for a private deploy use or are too complex in terms of requirements.
+Existing url shorteners are not suitable for a private deploy use or are too complex in terms of requirements.
 
 *Distill* aims to create a easy deployable short url service
 that can be used for specific events.
@@ -12,32 +12,33 @@ that can be used for specific events.
 
 ## Features 
 
-- chose the alphabet set for the generate short id
-- chose the length of the generate short id
-- load existing short id <-> url mappings*
-- update an existing short id with a different target url*
-- set a time to live on short ids (globally or per id) 
-- set a end date on short ids (globabbly or per id)
-- set a request limit on short ids (globally or per id)
-- set a redirect for the `/` path
-- set a redirect url for the expired ids
-- backup/restore urls in csv or binary format
-- import data via csv
+- Choose the alphabet set for the generate short id
+- Choose the length of the generate short id
+- Load existing short id <-> url mappings*
+- Overwrite an existing short id with a different target url*
+- Set a time to live on short ids (globally or per id) 
+- Set a end date on short ids (globabbly or per id)
+- Set a request limit on short ids (globally or per id)
+- Set a redirect for the `/` path
+- Set a redirect url for the expired ids
+- Backup/restore urls in csv or binary format
+- Import data via csv
 
 \* the alphabet and lenght can be enforced
 
 ## Expiration strategy
 
 There are 3 ways to set an expiration for a short id:
- - ttl (seconds)
- - epiration date
- - max requests
 
-the three options can be configured globally or per short id, 
+ - TTL (seconds)
+ - Epiration date
+ - Max requests
+
+The three options can be configured globally or per short id, 
 the value specified for the short id takes always precedence over the 
-global configuration
+global configuration.
 
-For the *ttl* and the *expiration date* the actual expiration is selected as 
+For the *TTL* and the *expiration date* the actual expiration is selected as 
 ` max ( creation_date + ttl, expiration_date) `
 
 > !!! the expiration is set upon short id creation, changing global configuration 
@@ -51,11 +52,15 @@ Offline backup in csv and binary format
 
 minimum fields 
 
-```url```
+```
+url
+```
 
 all fields 
 
-```url,id,max_requests,ttl,expires_on```
+```
+url,id,max_requests,ttl,expires_on
+```
 
 the dates are expressed in RFC3339 format
 
@@ -90,9 +95,6 @@ docker-run
 lint 
 test
 
-*D#* distill is available as docker image
-
-*D*docker run welance/distill`
 
 ## Development
 to generate the Colfer model run 
