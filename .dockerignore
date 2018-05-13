@@ -7,7 +7,7 @@ api
 build
 cmd
 configs
-iljl.db
+distill.db
 internal
 main.go
 pkg

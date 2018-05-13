@@ -18,11 +18,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal/iljl"
-
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
+	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/distill/internal/distill"
 )
 
 // startCmd represents the start command
@@ -56,34 +55,15 @@ func init() {
 func start(cmd *cobra.Command, args []string) {
 	// TODO: Work your own magic here
 
-	mlog.Info("                                        ")
-	mlog.Info("    iiii  lllllll  jjjj lllllll         ")
-	mlog.Info("   i::::i l:::::l j::::jl:::::l         ")
-	mlog.Info("    iiii  l:::::l  jjjj l:::::l         ")
-	mlog.Info("          l:::::l       l:::::l         ")
-	mlog.Info("  iiiiiii  l::::ljjjjjjj l::::l         ")
-	mlog.Info("  i:::::i  l::::lj:::::j l::::l         ")
-	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
-	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
-	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
-	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
-	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
-	mlog.Info("   i::::i  l::::l j::::j l::::l         ")
-	mlog.Info("  i::::::il::::::lj::::jl::::::l        ")
-	mlog.Info("  i::::::il::::::lj::::jl::::::l ...... ")
-	mlog.Info("  i::::::il::::::lj::::jl::::::l .::::. ")
-	mlog.Info("  iiiiiiiillllllllj::::jllllllll ...... ")
-	mlog.Info("                  j::::j                ")
-	mlog.Info("        jjjj      j::::j                ")
-	mlog.Info("       j::::jj   j:::::j                ")
-	mlog.Info("       j::::::jjj::::::j                ")
-	mlog.Info("        jj::::::::::::j                 ")
-	mlog.Info("          jjj::::::jjj                  ")
-	mlog.Info("             jjjjjj                     ")
-	mlog.Info("                                        ")
-	mlog.Info("      !!    starting    !!              ")
+	mlog.Info("      _ _     _   _ _ _ ")
+	mlog.Info("     | (_)   | | (_) | |")
+	mlog.Info("   __| |_ ___| |_ _| | |")
+	mlog.Info("  / _` | / __| __| | | |")
+	mlog.Info(" | (_| | \\__ \\ |_| | | |")
+	mlog.Info("  \\__,_|_|___/\\__|_|_|_|  v.%v", version)
+	mlog.Info("")
 
-	iljl.NewSession()
-	r := iljl.RegisterEndpoints()
+	distill.NewSession()
+	r := distill.RegisterEndpoints()
 	http.ListenAndServe(fmt.Sprintf("%s:%d", internal.Config.Server.Host, internal.Config.Server.Port), r)
 }

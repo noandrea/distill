@@ -12,13 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmd
 
-import "gitlab.com/welance/distill/cmd"
+import (
+	"fmt"
 
-// Version hold the version of the program
-var Version = "0.0.0"
+	"github.com/spf13/cobra"
+)
 
-func main() {
-	cmd.Execute(Version)
+// versionCmd represents the version command
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the program version and exits",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		// TODO: Work your own magic here
+		fmt.Println("version", version)
+	},
+}
+
+func init() {
+	RootCmd.AddCommand(versionCmd)
 }

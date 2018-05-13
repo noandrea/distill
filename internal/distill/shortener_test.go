@@ -1,10 +1,10 @@
-package iljl
+package distill
 
 import (
 	"regexp"
 	"testing"
 
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
 func TestGenerateID(t *testing.T) {

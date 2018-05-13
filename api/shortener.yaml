@@ -5,7 +5,7 @@ info:
   license:
     name: MIT
 servers:
-  - url: https://iljl.li/v1
+  - url: https://distill.li/v1
 paths:
   /api/stats:
     get:

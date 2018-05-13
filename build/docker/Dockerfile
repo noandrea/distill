@@ -6,5 +6,5 @@ RUN ls
 COPY ./dist /data
 RUN mkdir -p /data/db
 
-ENTRYPOINT [ "/data/ilij", "-c", "/data/ilij.conf.yaml" ]
-CMD ["start"]
+ENTRYPOINT [ "/data/distill" ]
+CMD [ "start", "-c", "/data/configs/settings.docker.yaml"]

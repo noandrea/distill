@@ -19,9 +19,9 @@ import (
 	"path/filepath"
 
 	"github.com/jbrodriguez/mlog"
+	"gitlab.com/welance/distill/internal/distill"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal/iljl"
 )
 
 var backupFile string
@@ -55,8 +55,8 @@ func init() {
 }
 
 func backup(cmd *cobra.Command, args []string) {
-	iljl.NewSession()
-	defer iljl.CloseSession()
+	distill.NewSession()
+	defer distill.CloseSession()
 	abp, err := filepath.Abs(backupFile)
 	if err != nil {
 		mlog.Fatalf("Invalid path %s: %v", backupFile, err)
@@ -65,7 +65,7 @@ func backup(cmd *cobra.Command, args []string) {
 	if err != nil {
 		mlog.Fatalf("Error create backup path to %s: %v", backupFile, err)
 	}
-	if err = iljl.Backup(abp); err != nil {
+	if err = distill.Backup(abp); err != nil {
 		mlog.Fatalf("Error create backup at %s: %v", backupFile, err)
 	}
 }

@@ -22,22 +22,17 @@ import (
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
-var cfgFile, logFile string
+var cfgFile, logFile, version string
 var profile, debug bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "iljl",
+	Use:   "distill",
 	Short: "A practical url shortener",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:  ``,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -45,7 +40,8 @@ to quickly create a Cobra application.`,
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(v string) {
+	version = v
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
@@ -57,7 +53,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports Persistent Flags, which, if defined here,
 	// will be global for your application.
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/iljl/shortener.conf.yaml)")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/distill/settings.yaml)")
 	RootCmd.PersistentFlags().StringVar(&logFile, "log", "", "set a logging file, default stdout")
 	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug")
 }
@@ -74,9 +70,9 @@ func initConfig() {
 	mlog.DefaultFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 
 	// set configuration paramteres
-	viper.SetConfigName("shortener.conf")       // name of config file (without extension)
-	viper.AddConfigPath(os.Getenv("/etc/iljl")) // adding home directory as first search path
-	viper.AddConfigPath(os.Getenv("."))
+	viper.SetConfigName("settings")     // name of config file (without extension)
+	viper.AddConfigPath("/etc/distill") // adding home directory as first search path
+	viper.AddConfigPath("./configs")
 	viper.AutomaticEnv() // read in environment variables that match
 	// if there is the config file read it
 	if len(cfgFile) > 0 { // enable ability to specify config file via flag
