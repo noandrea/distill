@@ -248,11 +248,9 @@ func runDbMaintenance() {
 
 	if deletes-latestGC > gcLimit {
 		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
-		err := db.PurgeOlderVersions()
-		if err != nil {
-			mlog.Warning("Purge db failed %v", err)
-			return
-		}
+
+		mlog.Info("")
+
 		db.RunValueLogGC(internal.Config.Tuning.DbGCDiscardRation)
 		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
 		// updaete the gcCount
