@@ -1,6 +1,7 @@
 package distill
 
 import (
+	"crypto/subtle"
 	"log"
 	"net/http"
 	"time"
@@ -36,15 +37,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 		http.Redirect(w, r, internal.Config.Server.RootRedirect, 302)
 	})
 	// shortener redirect
-	router.Get("/{ID}", func(w http.ResponseWriter, r *http.Request) {
-		shortID := chi.URLParam(r, "ID")
-		if targetURL, err := GetURLRedirect(shortID); err == nil {
-			// send redirect
-			http.Redirect(w, r, targetURL, 302)
-			return
-		}
-		http.Error(w, "URL not found", 404)
-	})
+	router.Get("/{ID}", handleGetURL)
 	// handle api requests
 	router.Route("/api", func(r chi.Router) {
 		r.Use(apiContext)
@@ -120,6 +113,17 @@ func RegisterEndpoints() (router *chi.Mux) {
 //   _| |  | |_  _/ /   \ \_  _| |_\   |_  _| |_.' /_| |__/ | _| |__/ | _| |  \ \_| \____) |
 //  |____||____||____| |____||_____|\____||______.'|________||________||____| |___|\______.'
 //
+
+func handleGetURL(w http.ResponseWriter, r *http.Request) {
+	shortID := chi.URLParam(r, "ID")
+	targetURL, err := GetURLRedirect(shortID)
+	if err != nil {
+		http.Error(w, "URL not found", 404)
+	}
+	// send redirect
+	http.Redirect(w, r, targetURL, 302)
+	return
+}
 
 func healthCheckHanlder(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("good"))
@@ -203,7 +207,7 @@ type ErrResponse struct {
 // apiContext verify the api key header
 func apiContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiKey := r.Header.Get("X-API-KEY")
+		apiKey := r.Header.Get(internal.Config.Tuning.APIKeyHeaderName)
 		keyMatch := subtle.ConstantTimeCompare([]byte(apiKey), []byte(internal.Config.Server.APIKey))
 		if keyMatch == 0 {
 			http.Error(w, http.StatusText(403), 403)

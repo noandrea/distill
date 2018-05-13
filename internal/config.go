@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -34,6 +35,7 @@ type TuningConfig struct {
 	DbGCDiscardRation      float64 `yaml:"dbGCDiscardRation"`
 	URLCaheSize            int     `yaml:"URLCaheSize"`
 	BckCSVIterPrefetchSize int     `yaml:"exportIteratorPrefetchSize"`
+	APIKeyHeaderName       string  `yaml:"apiKeyHeaderName"`
 }
 
 // ConfigSchema define the configuration object
@@ -84,6 +86,10 @@ func (c *ConfigSchema) Validate() {
 
 	if c.Tuning.BckCSVIterPrefetchSize <= 0 || c.Tuning.BckCSVIterPrefetchSize > 1 {
 		c.Tuning.BckCSVIterPrefetchSize = 2048
+	}
+
+	if len(strings.TrimSpace(c.Tuning.APIKeyHeaderName)) == 0 {
+		c.Tuning.APIKeyHeaderName = "X-API-KEY"
 	}
 
 }
