@@ -151,41 +151,6 @@ func Test_keyGlobalStat(t *testing.T) {
 	}
 }
 
-func Test_keyURLStatCount(t *testing.T) {
-	type args struct {
-		prefix byte
-		id     string
-	}
-	tests := []struct {
-		id    string
-		wantK []byte
-		match bool
-	}{
-		{
-			id:    "one",
-			wantK: append([]byte{keyURLStatCountPrefix}, []byte("one")...),
-			match: true,
-		},
-		{
-			id:    "two",
-			wantK: append([]byte{keyURLStatCountPrefix}, []byte("two")...),
-			match: true,
-		},
-		{
-			id:    "err",
-			wantK: append([]byte{keyURLPrefix}, []byte("err")...),
-			match: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.id, func(t *testing.T) {
-			if gotK := keyURLStatCount(tt.id); tt.match != reflect.DeepEqual(gotK, tt.wantK) {
-				t.Errorf("key() = %v, want %v", gotK, tt.wantK)
-			}
-		})
-	}
-}
-
 func Test_arrayconv(t *testing.T) {
 	tests := []struct {
 		name string

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -67,7 +68,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 			MaxRequests: 0,
 		},
 		Tuning: internal.TuningConfig{
-			StatsEventsWorkerNum: 20,
+			StatsEventsWorkerNum: 2,
 		},
 	}
 	internal.Config.Validate()
@@ -644,8 +645,12 @@ func TestImportCSV(t *testing.T) {
 }
 
 func TestBackupRestore(t *testing.T) {
+
+	tmpdir, _ := ioutil.TempDir("/tmp/", "distill-bckrestore")
+
 	type args struct {
 		bckFile string
+		err     error
 	}
 	tests := []struct {
 		name     string
@@ -655,14 +660,20 @@ func TestBackupRestore(t *testing.T) {
 	}{
 		{
 			name:     "1123 without ids",
-			args:     args{bckFile: "bck.csv"},
+			args:     args{bckFile: filepath.Join(tmpdir, "bck.csv")},
 			wantErr:  false,
 			wantRows: 421,
 		},
 		{
 			name:     "1123 with ids",
-			args:     args{bckFile: "bck.bin"},
+			args:     args{bckFile: filepath.Join(tmpdir, "bck.bin")},
 			wantErr:  false,
+			wantRows: 321,
+		},
+		{
+			name:     "1123 with ids",
+			args:     args{bckFile: filepath.Join(tmpdir, "bck.zip")},
+			wantErr:  true,
 			wantRows: 321,
 		},
 	}
