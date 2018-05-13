@@ -181,13 +181,13 @@ func (o *URLInfo) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is distillill.ColferMax.
+// The error return option is distill.ColferMax.
 func (o *URLInfo) MarshalLen() (int, error) {
 	l := 1
 
 	if x := len(o.ID); x != 0 {
 		if x > ColferSizeMax {
-			return 0, ColferMax(fmt.Sprintf("colfer: field distillill.URLInfo.ID exceeds %d bytes", ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field distill.URLInfo.ID exceeds %d bytes", ColferSizeMax))
 		}
 		for l += x + 2; x >= 0x80; l++ {
 			x >>= 7
@@ -196,7 +196,7 @@ func (o *URLInfo) MarshalLen() (int, error) {
 
 	if x := len(o.URL); x != 0 {
 		if x > ColferSizeMax {
-			return 0, ColferMax(fmt.Sprintf("colfer: field distillill.URLInfo.URL exceeds %d bytes", ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field distill.URLInfo.URL exceeds %d bytes", ColferSizeMax))
 		}
 		for l += x + 2; x >= 0x80; l++ {
 			x >>= 7
@@ -256,13 +256,13 @@ func (o *URLInfo) MarshalLen() (int, error) {
 	}
 
 	if l > ColferSizeMax {
-		return l, ColferMax(fmt.Sprintf("colfer: struct distillill.URLInfo exceeds %d bytes", ColferSizeMax))
+		return l, ColferMax(fmt.Sprintf("colfer: struct distill.URLInfo exceeds %d bytes", ColferSizeMax))
 	}
 	return l, nil
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return option is distillill.ColferMax.
+// The error return option is distill.ColferMax.
 func (o *URLInfo) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -274,7 +274,7 @@ func (o *URLInfo) MarshalBinary() (data []byte, err error) {
 }
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
-// The error return options are io.EOF, distillill.ColferError adistillistill.ColferMax.
+// The error return options are io.EOF, distill.ColferError adistillistill.ColferMax.
 func (o *URLInfo) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
@@ -307,7 +307,7 @@ func (o *URLInfo) Unmarshal(data []byte) (int, error) {
 		}
 
 		if x > uint(ColferSizeMax) {
-			return 0, ColferMax(fmt.Sprintf("colfer: distillill.URLInfo.ID size %d exceeds %d bytes", x, ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: distill.URLInfo.ID size %d exceeds %d bytes", x, ColferSizeMax))
 		}
 
 		start := i
@@ -346,7 +346,7 @@ func (o *URLInfo) Unmarshal(data []byte) (int, error) {
 		}
 
 		if x > uint(ColferSizeMax) {
-			return 0, ColferMax(fmt.Sprintf("colfer: distillill.URLInfo.URL size %d exceeds %d bytes", x, ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: distill.URLInfo.URL size %d exceeds %d bytes", x, ColferSizeMax))
 		}
 
 		start := i
@@ -582,13 +582,13 @@ func (o *URLInfo) Unmarshal(data []byte) (int, error) {
 	}
 eof:
 	if i >= ColferSizeMax {
-		return 0, ColferMax(fmt.Sprintf("colfer: struct distillill.URLInfo size exceeds %d bytes", ColferSizeMax))
+		return 0, ColferMax(fmt.Sprintf("colfer: struct distill.URLInfo size exceeds %d bytes", ColferSizeMax))
 	}
 	return 0, io.EOF
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, distillill.ColferErrodistillistill.ColferTaidistilld distill.ColferMax.
+// The error return options are io.EOF, distill.ColferErrodistillistill.ColferTaidistilld distill.ColferMax.
 func (o *URLInfo) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {
