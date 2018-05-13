@@ -204,7 +204,8 @@ type ErrResponse struct {
 func apiContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		apiKey := r.Header.Get("X-API-KEY")
-		if apiKey != internal.Config.Server.APIKey {
+		keyMatch := subtle.ConstantTimeCompare([]byte(apiKey), []byte(internal.Config.Server.APIKey))
+		if keyMatch == 0 {
 			http.Error(w, http.StatusText(403), 403)
 			return
 		}
