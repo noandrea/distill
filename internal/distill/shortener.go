@@ -1,8 +1,8 @@
-package iljl
+package distill
 
 import (
 	gonanoid "github.com/matoous/go-nanoid"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
 // generateID generates a new id

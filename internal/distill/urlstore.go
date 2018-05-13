@@ -1,4 +1,4 @@
-package iljl
+package distill
 
 import (
 	"encoding/csv"
@@ -10,7 +10,7 @@ import (
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
 const (

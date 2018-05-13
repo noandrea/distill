@@ -14,7 +14,7 @@
 
 package main
 
-import "gitlab.com/lowgroundandbigshoes/iljl/cmd"
+import "gitlab.com/welance/distill/cmd"
 
 // Version hold the version of the program
 var Version = "0.0.0"

@@ -1,4 +1,4 @@
-package iljl
+package distill
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/lowgroundandbigshoes/iljl/internal"
+	"gitlab.com/welance/distill/internal"
 )
 
 func setupLog() {
@@ -21,7 +21,7 @@ func setupLog() {
 func buildConifgTest() {
 	setupLog()
 	// path
-	path, _ := ioutil.TempDir("/tmp/", "iljl")
+	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
@@ -53,7 +53,7 @@ func buildConifgPanicTest() {
 
 func buildConifgTestShortIDParams(alphabet string, length int) {
 	setupLog()
-	path, _ := ioutil.TempDir("/tmp/", "iljl")
+	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
@@ -74,7 +74,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 
 func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 	setupLog()
-	path, _ := ioutil.TempDir("/tmp/", "iljl")
+	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
