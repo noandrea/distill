@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -66,7 +68,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 			MaxRequests: 0,
 		},
 		Tuning: internal.TuningConfig{
-			StatsEventsWorkerNum: 20,
+			StatsEventsWorkerNum: 2,
 		},
 	}
 	internal.Config.Validate()
@@ -92,6 +94,40 @@ func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 		},
 	}
 	internal.Config.Validate()
+}
+
+func TestGenerateID(t *testing.T) {
+
+	tests := []struct {
+		Alphabet      string
+		Length        int
+		InvalidRegexp string
+	}{
+		{"1234567890", 7, "[qwertyuiopasdfghjkl]"},
+		{"1234567890", 5, "[qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM]"},
+		{"1234567890", 4, "[qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM]"},
+		{"1234567890", 20, "[qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM]"},
+		{"qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM", 6, "[1234567890]"},
+		{"abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 30, "[iIl1o0O]"},
+	}
+	for _, tt := range tests {
+		internal.Config = internal.ConfigSchema{
+			ShortID: internal.ShortIDConfig{
+				Alphabet: tt.Alphabet,
+				Length:   tt.Length,
+			},
+		}
+		t.Run(tt.Alphabet, func(t *testing.T) {
+			gotShortID := generateID()
+			if len(gotShortID) != tt.Length {
+				t.Errorf("GenerateID() = %v, len = %v, want %v", gotShortID, len(gotShortID), tt.Length)
+			}
+			m, _ := regexp.MatchString(tt.InvalidRegexp, gotShortID)
+			if m {
+				t.Errorf("GenerateID() = %v, match = %v, expected no match", gotShortID, tt.InvalidRegexp)
+			}
+		})
+	}
 }
 
 func TestUpsertURL(t *testing.T) {
@@ -609,8 +645,12 @@ func TestImportCSV(t *testing.T) {
 }
 
 func TestBackupRestore(t *testing.T) {
+
+	tmpdir, _ := ioutil.TempDir("/tmp/", "distill-bckrestore")
+
 	type args struct {
 		bckFile string
+		err     error
 	}
 	tests := []struct {
 		name     string
@@ -620,14 +660,20 @@ func TestBackupRestore(t *testing.T) {
 	}{
 		{
 			name:     "1123 without ids",
-			args:     args{bckFile: "bck.csv"},
+			args:     args{bckFile: filepath.Join(tmpdir, "bck.csv")},
 			wantErr:  false,
 			wantRows: 421,
 		},
 		{
 			name:     "1123 with ids",
-			args:     args{bckFile: "bck.bin"},
+			args:     args{bckFile: filepath.Join(tmpdir, "bck.bin")},
 			wantErr:  false,
+			wantRows: 321,
+		},
+		{
+			name:     "1123 with ids",
+			args:     args{bckFile: filepath.Join(tmpdir, "bck.zip")},
+			wantErr:  true,
 			wantRows: 321,
 		},
 	}

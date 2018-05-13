@@ -87,27 +87,22 @@ func loadGlobalStatistics() (s *Statistics, err error) {
 
 func resetGlobalStatistics() (err error) {
 	s := &Statistics{}
+	// iterate over the urls
+	i := NewURLIterator()
+	for i.HasNext() {
+		u, err := i.NextURL()
+		if err != nil {
+			mlog.Warning("Warning looping through the URLs")
+		}
+		s.Urls++
+		s.Upserts++
+		s.Gets += u.Counter
+	}
+	// close the iterator
+	i.Close()
 	// run the update
 	err = db.Update(func(txn *badger.Txn) (err error) {
 		// find all the urls
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 200
-		opts.PrefetchValues = true
-		it := txn.NewIterator(opts)
-		defer it.Close()
-
-		ucp := []byte{keyURLStatCountPrefix}
-		for it.Seek(ucp); it.ValidForPrefix(ucp); it.Next() {
-			s.Urls++
-			s.Upserts++
-			// update gets
-			v, err := it.Item().Value()
-			if err != nil {
-				v = numberZero
-			}
-			s.Gets += atoi(v)
-		}
-
 		dbSetInt64(txn, statsKeyGlobalURLCount, s.Urls)
 		dbSetInt64(txn, statsKeyGlobalGetCount, s.Gets)
 		dbSetInt64(txn, statsKeyGlobalDelCount, 0)
@@ -128,7 +123,7 @@ func pushEvent(urlop *URLOp) {
 	case opcodeDelete, opcodeExpired:
 		key := fmt.Sprint(urlop.opcode, ":", urlop.ID)
 		// if it's in cache do not queue the job
-		if _, err := sc.Get(key); err == nil {
+		if _, err := sc.GetIFPresent(key); err == nil {
 			return
 		}
 		sc.SetWithExpire(key, nil, time.Duration(60)*time.Second)

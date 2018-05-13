@@ -17,10 +17,9 @@ const (
 )
 
 const (
-	keySysPrefix          = 0x00
-	keyStatPrefix         = 0x02
-	keyURLPrefix          = 0x04
-	keyURLStatCountPrefix = 0x05
+	keySysPrefix  = 0x00
+	keyStatPrefix = 0x02
+	keyURLPrefix  = 0x04
 )
 
 var (
@@ -62,11 +61,11 @@ type URLReq struct {
 
 // Statistics contains the global statistics
 type Statistics struct {
-	mutex   sync.Mutex
-	Urls    int64 `json:"urls"`
-	Gets    int64 `json:"gets"`
-	Upserts int64 `json:"upserts"`
-	Deletes int64 `json:"deletes"`
+	mutex   sync.Mutex `json:"-"`
+	Urls    int64      `json:"urls"`
+	Gets    int64      `json:"gets"`
+	Upserts int64      `json:"upserts"`
+	Deletes int64      `json:"deletes"`
 }
 
 func (s *Statistics) String() string {
@@ -245,10 +244,6 @@ var ErrInvalidBackupRecord = fmt.Errorf("Invalid backup record")
 
 func keyURL(id string) (k []byte) {
 	return key(keyURLPrefix, id)
-}
-
-func keyURLStatCount(id string) (k []byte) {
-	return key(keyURLStatCountPrefix, id)
 }
 
 func keySys(id string) (k []byte) {
