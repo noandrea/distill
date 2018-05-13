@@ -23,12 +23,15 @@ func RegisterEndpoints() (router *chi.Mux) {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
+
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
 	// processing should be stopped.
 	router.Use(middleware.Timeout(60 * time.Second))
 	// register cors and apiContext middleware
 	router.Use(cors)
+	// profiler route
+	router.Mount("/profile", middleware.Profiler())
 
 	// health check route
 	router.Get("/health-check", healthCheckHanlder)
