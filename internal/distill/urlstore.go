@@ -229,6 +229,49 @@ func Restore(inFile string) (err error) {
 	return
 }
 
+// NewURLIterator return an url iterator over the database
+func NewURLIterator() *URLIterator {
+	txn := db.NewTransaction(false)
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	px := []byte{keyURLPrefix}
+	it.Seek(px)
+	return &URLIterator{
+		Transaction: txn,
+		Iterator:    it,
+		KeyPrefix:   px,
+	}
+}
+
+// URLIterator an iterator over URLs
+type URLIterator struct {
+	Transaction *badger.Txn
+	Iterator    *badger.Iterator
+	KeyPrefix   []byte
+}
+
+// HasNext tells if there are still elements in the list
+func (i *URLIterator) HasNext() bool {
+	i.Iterator.Next()
+	return i.Iterator.ValidForPrefix(i.KeyPrefix)
+}
+
+// NextURL get the next URL from the iterator
+func (i *URLIterator) NextURL() (u *URLInfo, err error) {
+	v, err := i.Iterator.Item().Value()
+	if err != nil {
+		return
+	}
+	u = &URLInfo{}
+	err = u.UnmarshalBinary(v)
+	return
+}
+
+// Close the iterator
+func (i *URLIterator) Close() {
+	i.Iterator.Close()
+	i.Transaction.Discard()
+}
+
 // Helper fucntions
 
 // dbGet helper functin
