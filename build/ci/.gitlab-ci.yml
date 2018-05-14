@@ -13,6 +13,7 @@ before_script:
   - cd $CI_PROJECT_NAME
   - echo -e "machine gitlab.com\nlogin gitlab-ci-token\npassword ${CI_JOB_TOKEN}" > ~/.netrc
   - dep ensure -vendor-only
+  - service docker start
 
 lint_code:
   stage: test

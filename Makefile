@@ -54,12 +54,12 @@ docker-build: build-dist
 	@echo copy resources
 	@cp configs/settings.docker.yaml $(OUTPUTFOLDER)/settings.yaml
 	@echo build image
-	docker build -t $(DOCKERIMAGE) -f ./build/docker/Dockerfile .
+	docker build -t $(DOCKERIMAGE):$(TAG) -f ./build/docker/Dockerfile .
 	@echo done
 
 docker-push: docker-build
 	@echo push image
-	docker push $(DOCKERIMAGE)
+	docker push $(DOCKERIMAGE):$(TAG)
 	@echo done
 
 docker-run: 
