@@ -48,8 +48,10 @@ build-windows:
     paths:
       - dist
 
-docker-build:
+build-docker:
   stage: build
+  variables:
+    - DOCKER_HOST: docker
   services:
     - docker:dind
   script:
@@ -57,8 +59,10 @@ docker-build:
   only:
     - tags
 
-docker-push:
+publish-docker:
   stage: publish
+  variables:
+    - DOCKER_HOST: docker
   services:
     - docker:dind
   script:
