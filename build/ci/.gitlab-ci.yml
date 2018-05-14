@@ -13,7 +13,6 @@ before_script:
   - cd $CI_PROJECT_NAME
   - echo -e "machine gitlab.com\nlogin gitlab-ci-token\npassword ${CI_JOB_TOKEN}" > ~/.netrc
   - dep ensure -vendor-only
-  - service docker start
 
 lint_code:
   stage: test
@@ -49,17 +48,3 @@ build-windows:
     paths:
       - dist
 
-
-docker-build:
-  stage: build
-  script:
-    - make docker TAG=$CI_COMMIT_TAG
-  only:
-    - tags
-
-docker-push:
-  stage: publish
-  script:
-    - make docker-push TAG=$CI_COMMIT_TAG
-  only:
-    - tags
