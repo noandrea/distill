@@ -5,6 +5,9 @@ stages:
   - build
   - publish
 
+variables:
+  DOCKER_HOST: docker
+
 before_script:
   - cd $GOPATH/src
   - mkdir -p gitlab.com/$CI_PROJECT_NAMESPACE
@@ -50,8 +53,6 @@ build-windows:
 
 build-docker:
   stage: build
-  variables:
-    - DOCKER_HOST: docker
   services:
     - docker:dind
   script:
@@ -61,8 +62,6 @@ build-docker:
 
 publish-docker:
   stage: publish
-  variables:
-    - DOCKER_HOST: docker
   services:
     - docker:dind
   script:
