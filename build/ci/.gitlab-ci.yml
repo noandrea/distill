@@ -1,4 +1,4 @@
-image: sjdweb/go-docker-build:1.10
+image: welance/build-golang:1.10
 
 stages:
   - test
@@ -27,9 +27,13 @@ unit_tests:
 build:
   stage: build
   script:
-    - make docker
+    - make docker TAG=$CI_COMMIT_TAG
+  only:
+    - tag
 
 docker-build:
   stage: publish
   script:
-    - make docker-push
+    - make docker-push TAG=$CI_COMMIT_TAG
+  only:
+    - tag
