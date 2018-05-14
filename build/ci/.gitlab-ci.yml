@@ -29,11 +29,11 @@ build:
   script:
     - make docker TAG=$CI_COMMIT_TAG
   only:
-    - tag
+    - tags
 
 docker-build:
   stage: publish
   script:
     - make docker-push TAG=$CI_COMMIT_TAG
   only:
-    - tag
+    - tags
