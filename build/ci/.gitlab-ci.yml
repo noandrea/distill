@@ -25,14 +25,39 @@ unit_tests:
   script:
     - make test
 
-build:
+build-linux:
+  stage: build
+  script:
+    - make build OS=linux
+  artifacts:
+    paths:
+      - dist
+
+build-darwin:
+  stage: build
+  script:
+    - make build OS=darwin
+  artifacts:
+    paths:
+      - dist
+
+build-windows:
+  stage: build
+  script:
+    - make build OS=windows
+  artifacts:
+    paths:
+      - dist
+
+
+docker-build:
   stage: build
   script:
     - make docker TAG=$CI_COMMIT_TAG
   only:
     - tags
 
-docker-build:
+docker-push:
   stage: publish
   script:
     - make docker-push TAG=$CI_COMMIT_TAG
