@@ -2,8 +2,9 @@
 server:
   host: "0.0.0.0"
   port: 1804
-  apiKey: naiuraoijodmaojorierjaomdaodorpaokda
-  rootRedirect: https://mywebsite.com
+  apiKey: 123123_changeme_changeme
+  rootRedirect: https://gitlab.com/welance/oss/distill/wikis/welcome
+  expiredRedirect: https://gitlab.com/welance/oss/distill/wikis/Expired-URL
   dbPath: ./distill.db
   enableStats: true
 
