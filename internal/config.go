@@ -45,17 +45,38 @@ type ConfigSchema struct {
 	Tuning  TuningConfig  `yaml:"tuning"`
 }
 
-//Validate configuration
-func (c *ConfigSchema) Validate() {
+func empty(s string) bool {
+	return len(strings.TrimSpace(s)) == 0
+}
 
-	if c.ShortID.Length < 3 {
-		panic("short_id.length must be at least 3")
+//Defaults generate configuration defaults
+func (c *ConfigSchema) Defaults() {
+	// for server
+	if empty(c.Server.Host) {
+		c.Server.Host = "0.0.0.0"
+	}
+	if c.Server.Port == 0 {
+		c.Server.Port = 1804
+	}
+	if empty(c.Server.DbPath) {
+		c.Server.DbPath = "distill.db"
+	}
+	if empty(c.Server.RootRedirect) {
+		c.Server.RootRedirect = "https://gitlab.com/welance/oss/distill/wikis/welcome"
+	}
+	if empty(c.Server.ExpiredRedirect) {
+		c.Server.ExpiredRedirect = "https://gitlab.com/welance/oss/distill/wikis/Expired-URL"
 	}
 
-	if len(c.ShortID.Alphabet) < c.ShortID.Length {
-		panic(fmt.Sprint("short_id.alphabet must be at least ", c.ShortID.Length, " characters long"))
+	// for short id
+	if empty(c.ShortID.Alphabet) {
+		c.ShortID.Alphabet = "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	}
+	if c.ShortID.Length == 0 {
+		c.ShortID.Length = 6
 	}
 
+	// For tuning
 	if c.Tuning.StatsEventsQueueSize <= 0 {
 		c.Tuning.StatsEventsQueueSize = 2048
 	}
@@ -88,10 +109,25 @@ func (c *ConfigSchema) Validate() {
 		c.Tuning.BckCSVIterPrefetchSize = 2048
 	}
 
-	if len(strings.TrimSpace(c.Tuning.APIKeyHeaderName)) == 0 {
+	if empty(c.Tuning.APIKeyHeaderName) {
 		c.Tuning.APIKeyHeaderName = "X-API-KEY"
 	}
+}
 
+//Validate configuration
+func (c *ConfigSchema) Validate() {
+
+	if empty(c.Server.APIKey) {
+		panic("server.apy_key cannot be empty")
+	}
+
+	if c.ShortID.Length < 3 {
+		panic("short_id.length must be at least 3")
+	}
+
+	if len(c.ShortID.Alphabet) < c.ShortID.Length {
+		panic(fmt.Sprint("short_id.alphabet must be at least ", c.ShortID.Length, " characters long"))
+	}
 }
 
 // Config sytem configuration
