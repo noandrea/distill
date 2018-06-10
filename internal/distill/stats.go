@@ -29,7 +29,7 @@ var (
 
 // NewStatistics starts the statistics collector worker pool
 func NewStatistics() (err error) {
-	// initializae system key
+	// initialize system key
 	sysKeyPurgeCount = keySys("ilij_sys_purge_count")
 	sysKeyGCCount = keySys("ilij_sys_gc_count")
 	// initialize stats keys
@@ -81,7 +81,7 @@ func loadGlobalStatistics() (s *Statistics, err error) {
 		return
 	})
 	globalStatistics = s
-	mlog.Info("Statistics are %v", s)
+	mlog.Info("Status: %v", s)
 	return
 }
 

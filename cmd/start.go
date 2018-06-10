@@ -20,8 +20,8 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/welance/oss/distill/internal/distill"
 	"gitlab.com/welance/oss/distill/internal"
+	"gitlab.com/welance/oss/distill/internal/distill"
 )
 
 // startCmd represents the start command
@@ -62,6 +62,7 @@ func start(cmd *cobra.Command, args []string) {
 	mlog.Info(" | (_| | \\__ \\ |_| | | |")
 	mlog.Info("  \\__,_|_|___/\\__|_|_|_|  v.%v", version)
 	mlog.Info("")
+	mlog.Info("Listening to %v:%v", internal.Config.Server.Host, internal.Config.Server.Port)
 
 	distill.NewSession()
 	r := distill.RegisterEndpoints()
