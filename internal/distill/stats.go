@@ -187,7 +187,10 @@ func processEvents(workerID int) {
 		}
 		mlog.Trace("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 		// run the maintenance
-		go runDbMaintenance()
+		// TODO: this has to be fixed since it can create issues with the database (hint: use a channel)
+		// it can happen that the database get closed while the maintenance is about to run
+		// creating a panic
+		// go runDbMaintenance()
 	}
 	// complete task
 	mlog.Trace("Stop event processor id: %v", workerID)
