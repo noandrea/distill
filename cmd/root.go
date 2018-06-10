@@ -22,7 +22,7 @@ import (
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 var cfgFile, logFile, version string

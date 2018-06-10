@@ -20,8 +20,8 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/welance/distill/internal"
-	"gitlab.com/welance/distill/internal/distill"
+	"gitlab.com/welance/oss/distill/internal/distill"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 // startCmd represents the start command

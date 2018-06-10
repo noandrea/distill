@@ -12,7 +12,7 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 	gonanoid "github.com/matoous/go-nanoid"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 // generateID generates a new id

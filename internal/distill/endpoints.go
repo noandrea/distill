@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"

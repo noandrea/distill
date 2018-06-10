@@ -2,9 +2,9 @@
 
 Another url shortener 
 
-[![pipeline status](https://gitlab.com/welance/distill/badges/develop/pipeline.svg)](https://gitlab.com/welance/distill/commits/develop)
+[![pipeline status](https://gitlab.com/welance/oss/distill/badges/develop/pipeline.svg)](https://gitlab.com/welance/oss/distill/commits/develop)
 
-[![coverage report](https://gitlab.com/welance/distill/badges/develop/coverage.svg)](https://gitlab.com/welance/distill/commits/develop)
+[![coverage report](https://gitlab.com/welance/oss/distill/badges/develop/coverage.svg)](https://gitlab.com/welance/oss/distill/commits/develop)
 
 ## Motivations
 

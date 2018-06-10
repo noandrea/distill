@@ -9,7 +9,7 @@ import (
 	"github.com/jbrodriguez/mlog"
 
 	"github.com/dgraph-io/badger"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 var (

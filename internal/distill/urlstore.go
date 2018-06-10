@@ -10,7 +10,7 @@ import (
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 const (
