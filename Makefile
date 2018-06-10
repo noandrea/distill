@@ -5,6 +5,7 @@ GIT_DESCR = $(shell git describe)
 OUTPUTFOLDER = dist
 # docker image
 DOCKERIMAGE = welance/distill
+TAG = $(shell git describe)
 # build paramters
 OS = linux
 ARCH = amd64
@@ -30,7 +31,7 @@ build-dist: $(GOFILES)
 test: test-all
 
 test-all:
-	@go test -v $(GOPACKAGES)
+	@go test -v $(GOPACKAGES) -coverprofile .testCoverage.txt
 
 bench: bench-all
 
@@ -53,12 +54,12 @@ docker-build: build-dist
 	@echo copy resources
 	@cp configs/settings.docker.yaml $(OUTPUTFOLDER)/settings.yaml
 	@echo build image
-	docker build -t $(DOCKERIMAGE) -f ./build/docker/Dockerfile .
+	docker build -t $(DOCKERIMAGE):$(TAG) -f ./build/docker/Dockerfile .
 	@echo done
 
 docker-push: docker-build
 	@echo push image
-	docker push $(DOCKERIMAGE)
+	docker push $(DOCKERIMAGE):$(TAG)
 	@echo done
 
 docker-run: 

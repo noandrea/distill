@@ -2,6 +2,10 @@
 
 Another url shortener 
 
+[![pipeline status](https://gitlab.com/welance/distill/badges/develop/pipeline.svg)](https://gitlab.com/welance/distill/commits/develop)
+
+[![coverage report](https://gitlab.com/welance/distill/badges/develop/coverage.svg)](https://gitlab.com/welance/distill/commits/develop)
+
 ## Motivations
 
 Existing url shorteners are not suitable for a private deploy use or are too complex in terms of requirements.
@@ -97,5 +101,7 @@ test
 
 
 ## Development
-to generate the Colfer model run 
+- to generate the Colfer model run 
 `colf -b internal Go api/model.colf` from the project root
+
+- to enable coverage badge use `^coverage:\s(\d+(?:\.\d+)?%)` as regexp in gilab configuration
