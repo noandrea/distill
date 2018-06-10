@@ -216,15 +216,36 @@ func (s *Statistics) recGet() {
 }
 
 // runDbMaintenance
-var maintenanceRunning = false
+var (
+	maintenanceMutex   sync.Mutex
+	maintenanceRunning = false
+)
 
+// setRunMaintenance change maintenance status
+func setRunMaintenance(val bool) {
+	maintenanceMutex.Lock()
+	defer maintenanceMutex.Unlock()
+	maintenanceRunning = val
+}
+
+// isMaintenanceRunning check if there is already a routine doing maintenance
+func isMaintenanceRunning() bool {
+	maintenanceMutex.Lock()
+	defer maintenanceMutex.Unlock()
+	return maintenanceRunning
+}
+
+// runDbMaintenance runs the database maintenance
+// TODO: add tests for this function
 func runDbMaintenance() {
-	if maintenanceRunning {
+	if isMaintenanceRunning() {
 		return
 	}
-
-	maintenanceRunning = true
+	setRunMaintenance(true)
+	defer setRunMaintenance(false)
 	wg.Add(1)
+	defer wg.Done()
+
 	// caluclate if gc is necessary
 	deletes := globalStatistics.Deletes
 	gcLimit := internal.Config.Tuning.DbGCDeletesCount
@@ -248,14 +269,11 @@ func runDbMaintenance() {
 
 		db.RunValueLogGC(internal.Config.Tuning.DbGCDiscardRation)
 		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
-		// updaete the gcCount
+		// update the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {
 			gcCount++
 			dbSetInt64(txn, sysKeyGCCount, gcCount)
 			return
 		})
-		// unlock the maintenance
-		maintenanceRunning = false
 	}
-	wg.Done()
 }
