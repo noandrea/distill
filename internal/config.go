@@ -2,10 +2,12 @@ package internal
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
 	"gitlab.com/welance/oss/distill/pkg/common"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // ServerConfig configuration for the server
@@ -97,3 +99,21 @@ func (c *ConfigSchema) Validate() {
 
 // Config sytem configuration
 var Config ConfigSchema
+
+// GenerateDefaultConfig generate a default configuration file an writes it in the outFile
+func GenerateDefaultConfig(outFile, version string) {
+	Config.Defaults()
+	Config.Server.APIKey = common.GenerateSecret()
+	b, _ := yaml.Marshal(Config)
+	data := strings.Join([]string{
+		"#",
+		fmt.Sprintf("# Default configuration for Distill v%s", version),
+		"# http://gitlab.com/welance/oss/distill",
+		"#\n",
+		fmt.Sprintf("%s", b),
+		"#",
+		"# Config end",
+		"#",
+	}, "\n")
+	ioutil.WriteFile(outFile, []byte(data), 0600)
+}

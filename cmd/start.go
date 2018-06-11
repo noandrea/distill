@@ -27,14 +27,9 @@ import (
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: start,
+	Short: "Start distill",
+	Long:  ``,
+	Run:   start,
 }
 
 func init() {
@@ -53,8 +48,6 @@ func init() {
 }
 
 func start(cmd *cobra.Command, args []string) {
-	// TODO: Work your own magic here
-
 	mlog.Info("      _ _     _   _ _ _ ")
 	mlog.Info("     | (_)   | | (_) | |")
 	mlog.Info("   __| |_ ___| |_ _| | |")

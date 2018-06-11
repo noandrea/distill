@@ -1,11 +1,18 @@
 package common
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	gonanoid "github.com/matoous/go-nanoid"
 )
+
+// IsEqStr tells if two strings a and b are equals after trimming spaces
+func IsEqStr(a, b string) bool {
+	return strings.TrimSpace(a) == strings.TrimSpace(b)
+}
 
 // IsEmptyStr tells if a string is empty or not
 func IsEmptyStr(s string) bool {
@@ -45,4 +52,21 @@ func GenerateSecret() string {
 	l := 50
 	secret, _ := RandomString(a, l)
 	return secret
+}
+
+// AskYes prompt a yes/no question to the prompt
+func AskYes(question string, defaultYes bool) (isYes bool) {
+	fmt.Print(question)
+	if defaultYes {
+		fmt.Print(" [yes]: ")
+	} else {
+		fmt.Print(" [no]: ")
+	}
+	reader := bufio.NewReader(os.Stdin)
+	reply, _ := reader.ReadString('\n')
+	DefaultIfEmptyStr(&reply, "yes")
+	if IsEqStr(reply, "yes") {
+		return true
+	}
+	return
 }
