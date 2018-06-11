@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"gitlab.com/welance/oss/distill/pkg/common"
 )
 
 // ServerConfig configuration for the server
@@ -52,15 +54,11 @@ func empty(s string) bool {
 //Defaults generate configuration defaults
 func (c *ConfigSchema) Defaults() {
 	// for server
-	if empty(c.Server.Host) {
-		c.Server.Host = "0.0.0.0"
-	}
+	common.DefaultIfEmpty(&c.Server.Host, "0.0.0.0")
 	if c.Server.Port == 0 {
 		c.Server.Port = 1804
 	}
-	if empty(c.Server.DbPath) {
-		c.Server.DbPath = "distill.db"
-	}
+	common.DefaultIfEmpty(&c.Server.DbPath, "distill.db")
 	if empty(c.Server.RootRedirect) {
 		c.Server.RootRedirect = "https://gitlab.com/welance/oss/distill/wikis/welcome"
 	}

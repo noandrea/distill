@@ -15,6 +15,10 @@ import (
 	"gitlab.com/welance/oss/distill/internal"
 )
 
+func randomString(alphabet string, length int) (string, error) {
+	return gonanoid.Generate(alphabet, length)
+}
+
 // generateID generates a new id
 func generateID() (shortID string) {
 	a := internal.Config.ShortID.Alphabet
