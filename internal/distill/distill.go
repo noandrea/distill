@@ -175,7 +175,7 @@ func ImportCSV(inFile string) (rows int, err error) {
 			mlog.Error(err)
 			break
 		}
-		if rows == 0 && record[0] == "url" {
+		if rows == 0 && common.IsEqStr(record[0], "url") {
 			// header, skip
 			continue
 		}
