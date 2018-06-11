@@ -9,9 +9,9 @@ import (
 	gonanoid "github.com/matoous/go-nanoid"
 )
 
-// IsEqStr tells if two strings a and b are equals after trimming spaces
+// IsEqStr tells if two strings a and b are equals after trimming spaces and lowercasing
 func IsEqStr(a, b string) bool {
-	return strings.TrimSpace(a) == strings.TrimSpace(b)
+	return strings.ToLower(strings.TrimSpace(a)) == strings.ToLower(strings.TrimSpace(b))
 }
 
 // IsEmptyStr tells if a string is empty or not
