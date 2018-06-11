@@ -32,8 +32,8 @@ type TuningConfig struct {
 	StatsEventsWorkerNum   int     `yaml:"statsEventsWorkerNum"`
 	StatsEventsQueueSize   int     `yaml:"statsEventsQueueSize"`
 	StatsCaheSize          int     `yaml:"statsCacheSize"`
-	DbPurgeWritesCount     int64   `yaml:"dbPurgeWritesCount"`
-	DbGCDeletesCount       int64   `yaml:"dbGCDeletesCount"`
+	DbPurgeWritesCount     int     `yaml:"dbPurgeWritesCount"`
+	DbGCDeletesCount       int     `yaml:"dbGCDeletesCount"`
 	DbGCDiscardRation      float64 `yaml:"dbGCDiscardRation"`
 	URLCaheSize            int     `yaml:"URLCaheSize"`
 	BckCSVIterPrefetchSize int     `yaml:"exportIteratorPrefetchSize"`
@@ -54,68 +54,35 @@ func empty(s string) bool {
 //Defaults generate configuration defaults
 func (c *ConfigSchema) Defaults() {
 	// for server
-	common.DefaultIfEmpty(&c.Server.Host, "0.0.0.0")
-	if c.Server.Port == 0 {
-		c.Server.Port = 1804
-	}
-	common.DefaultIfEmpty(&c.Server.DbPath, "distill.db")
-	if empty(c.Server.RootRedirect) {
-		c.Server.RootRedirect = "https://gitlab.com/welance/oss/distill/wikis/welcome"
-	}
-	if empty(c.Server.ExpiredRedirect) {
-		c.Server.ExpiredRedirect = "https://gitlab.com/welance/oss/distill/wikis/Expired-URL"
-	}
+	common.DefaultIfEmptyStr(&c.Server.Host, "0.0.0.0")
+	common.DefaultIfEmptyInt(&c.Server.Port, 1804)
+	common.DefaultIfEmptyStr(&c.Server.DbPath, "distill.db")
+	common.DefaultIfEmptyStr(&c.Server.RootRedirect, "https://gitlab.com/welance/oss/distill/wikis/welcome")
+	common.DefaultIfEmptyStr(&c.Server.ExpiredRedirect, "https://gitlab.com/welance/oss/distill/wikis/Expired-URL")
 
 	// for short id
-	if empty(c.ShortID.Alphabet) {
-		c.ShortID.Alphabet = "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	}
-	if c.ShortID.Length == 0 {
-		c.ShortID.Length = 6
-	}
+	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+	common.DefaultIfEmptyInt(&c.ShortID.Length, 6)
 
 	// For tuning
-	if c.Tuning.StatsEventsQueueSize <= 0 {
-		c.Tuning.StatsEventsQueueSize = 2048
-	}
-
-	if c.Tuning.StatsEventsWorkerNum <= 0 {
-		c.Tuning.StatsEventsWorkerNum = 1
-	}
-
-	if c.Tuning.StatsCaheSize <= 0 {
-		c.Tuning.StatsCaheSize = 1024
-	}
-
-	if c.Tuning.DbPurgeWritesCount <= 0 {
-		c.Tuning.DbPurgeWritesCount = 2000
-	}
-
-	if c.Tuning.DbGCDeletesCount <= 0 {
-		c.Tuning.DbGCDeletesCount = 500
-	}
-
+	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsQueueSize, 2048)
+	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsWorkerNum, 1)
+	common.DefaultIfEmptyInt(&c.Tuning.StatsCaheSize, 1024)
+	common.DefaultIfEmptyInt(&c.Tuning.DbPurgeWritesCount, 2000)
+	common.DefaultIfEmptyInt(&c.Tuning.DbGCDeletesCount, 500)
 	if c.Tuning.DbGCDiscardRation <= 0 || c.Tuning.DbGCDiscardRation > 1 {
 		c.Tuning.DbGCDiscardRation = 0.5
 	}
+	common.DefaultIfEmptyInt(&c.Tuning.URLCaheSize, 2048)
+	common.DefaultIfEmptyInt(&c.Tuning.BckCSVIterPrefetchSize, 2048)
+	common.DefaultIfEmptyStr(&c.Tuning.APIKeyHeaderName, "X-API-KEY")
 
-	if c.Tuning.URLCaheSize <= 0 || c.Tuning.URLCaheSize > 1 {
-		c.Tuning.URLCaheSize = 2048
-	}
-
-	if c.Tuning.BckCSVIterPrefetchSize <= 0 || c.Tuning.BckCSVIterPrefetchSize > 1 {
-		c.Tuning.BckCSVIterPrefetchSize = 2048
-	}
-
-	if empty(c.Tuning.APIKeyHeaderName) {
-		c.Tuning.APIKeyHeaderName = "X-API-KEY"
-	}
 }
 
 //Validate configuration
 func (c *ConfigSchema) Validate() {
 
-	if empty(c.Server.APIKey) {
+	if common.IsEmptyStr(c.Server.APIKey) {
 		panic("server.apy_key cannot be empty")
 	}
 
