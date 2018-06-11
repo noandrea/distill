@@ -252,30 +252,30 @@ func runDbMaintenance() {
 	// caluclate if gc is necessary
 	deletes := globalStatistics.Deletes
 	gcLimit := internal.Config.Tuning.DbGCDeletesCount
-	gcCount := int64(0)
+	gcCount := 0
 	// retrieve the gcCount from the db
 	db.View(func(txn *badger.Txn) (err error) {
-		gcCount = dbGetInt64(txn, sysKeyGCCount)
+		gcCount = int(dbGetInt64(txn, sysKeyGCCount))
 		return
 	})
 
 	latestGC := gcCount * gcLimit
-	if latestGC > deletes {
+	if latestGC > int(deletes) {
 		// there was a reset should reset in the stats
 		gcCount, latestGC = 0, 0
 	}
 
-	if deletes-latestGC > gcLimit {
-		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+	if int(deletes)-latestGC > gcLimit {
+		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
 
 		mlog.Info("")
 
 		db.RunValueLogGC(internal.Config.Tuning.DbGCDiscardRation)
-		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
 		// update the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {
 			gcCount++
-			dbSetInt64(txn, sysKeyGCCount, gcCount)
+			dbSetInt64(txn, sysKeyGCCount, int64(gcCount))
 			return
 		})
 	}

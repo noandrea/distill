@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/welance/oss/distill/pkg/common"
+
 	"github.com/jbrodriguez/mlog"
 	"gitlab.com/welance/oss/distill/internal"
 )
@@ -28,12 +30,14 @@ func buildConifgTest() {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:   6,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -44,12 +48,14 @@ func buildConifgPanicTest() {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:   6,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -60,6 +66,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet:    alphabet,
@@ -71,6 +78,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 			StatsEventsWorkerNum: 2,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -81,6 +89,7 @@ func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet:    "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
@@ -93,6 +102,7 @@ func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 			StatsEventsWorkerNum: 20,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
