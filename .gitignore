@@ -3,3 +3,4 @@ vendor
 distill.db
 third_party/swagger
 dist
+.testCoverage.txt

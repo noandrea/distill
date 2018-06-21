@@ -61,15 +61,15 @@ type URLReq struct {
 
 // Statistics contains the global statistics
 type Statistics struct {
-	mutex   sync.Mutex `json:"-"`
-	Urls    int64      `json:"urls"`
-	Gets    int64      `json:"gets"`
-	Upserts int64      `json:"upserts"`
-	Deletes int64      `json:"deletes"`
+	mutex   sync.Mutex
+	Urls    int64 `json:"urls"`
+	Gets    int64 `json:"gets"`
+	Upserts int64 `json:"upserts"`
+	Deletes int64 `json:"deletes"`
 }
 
 func (s *Statistics) String() string {
-	return fmt.Sprintf("urls: %d, gets: %d, upserts:%d, deletes:%d",
+	return fmt.Sprintf("URLs: %d, GETs: %d, Inserts: %d, Deletes: %d",
 		s.Urls,
 		s.Gets,
 		s.Upserts,

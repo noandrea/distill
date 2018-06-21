@@ -9,7 +9,7 @@ import (
 	"github.com/jbrodriguez/mlog"
 
 	"github.com/dgraph-io/badger"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 
 // NewStatistics starts the statistics collector worker pool
 func NewStatistics() (err error) {
-	// initializae system key
+	// initialize system key
 	sysKeyPurgeCount = keySys("ilij_sys_purge_count")
 	sysKeyGCCount = keySys("ilij_sys_gc_count")
 	// initialize stats keys
@@ -81,7 +81,7 @@ func loadGlobalStatistics() (s *Statistics, err error) {
 		return
 	})
 	globalStatistics = s
-	mlog.Info("Statistics are %v", s)
+	mlog.Info("Status: %v", s)
 	return
 }
 
@@ -187,7 +187,10 @@ func processEvents(workerID int) {
 		}
 		mlog.Trace("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 		// run the maintenance
-		go runDbMaintenance()
+		// TODO: this has to be fixed since it can create issues with the database (hint: use a channel)
+		// it can happen that the database get closed while the maintenance is about to run
+		// creating a panic
+		// go runDbMaintenance()
 	}
 	// complete task
 	mlog.Trace("Stop event processor id: %v", workerID)
@@ -216,46 +219,64 @@ func (s *Statistics) recGet() {
 }
 
 // runDbMaintenance
-var maintenanceRunning = false
+var (
+	maintenanceMutex   sync.Mutex
+	maintenanceRunning = false
+)
 
+// setRunMaintenance change maintenance status
+func setRunMaintenance(val bool) {
+	maintenanceMutex.Lock()
+	defer maintenanceMutex.Unlock()
+	maintenanceRunning = val
+}
+
+// isMaintenanceRunning check if there is already a routine doing maintenance
+func isMaintenanceRunning() bool {
+	maintenanceMutex.Lock()
+	defer maintenanceMutex.Unlock()
+	return maintenanceRunning
+}
+
+// runDbMaintenance runs the database maintenance
+// TODO: add tests for this function
 func runDbMaintenance() {
-	if maintenanceRunning {
+	if isMaintenanceRunning() {
 		return
 	}
-
-	maintenanceRunning = true
+	setRunMaintenance(true)
+	defer setRunMaintenance(false)
 	wg.Add(1)
+	defer wg.Done()
+
 	// caluclate if gc is necessary
 	deletes := globalStatistics.Deletes
 	gcLimit := internal.Config.Tuning.DbGCDeletesCount
-	gcCount := int64(0)
+	gcCount := 0
 	// retrieve the gcCount from the db
 	db.View(func(txn *badger.Txn) (err error) {
-		gcCount = dbGetInt64(txn, sysKeyGCCount)
+		gcCount = int(dbGetInt64(txn, sysKeyGCCount))
 		return
 	})
 
 	latestGC := gcCount * gcLimit
-	if latestGC > deletes {
+	if latestGC > int(deletes) {
 		// there was a reset should reset in the stats
 		gcCount, latestGC = 0, 0
 	}
 
-	if deletes-latestGC > gcLimit {
-		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+	if int(deletes)-latestGC > gcLimit {
+		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
 
 		mlog.Info("")
 
 		db.RunValueLogGC(internal.Config.Tuning.DbGCDiscardRation)
-		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
-		// updaete the gcCount
+		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
+		// update the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {
 			gcCount++
-			dbSetInt64(txn, sysKeyGCCount, gcCount)
+			dbSetInt64(txn, sysKeyGCCount, int64(gcCount))
 			return
 		})
-		// unlock the maintenance
-		maintenanceRunning = false
 	}
-	wg.Done()
 }

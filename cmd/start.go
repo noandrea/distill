@@ -20,21 +20,16 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/welance/distill/internal"
-	"gitlab.com/welance/distill/internal/distill"
+	"gitlab.com/welance/oss/distill/internal"
+	"gitlab.com/welance/oss/distill/internal/distill"
 )
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: start,
+	Short: "Start distill",
+	Long:  ``,
+	Run:   start,
 }
 
 func init() {
@@ -53,8 +48,6 @@ func init() {
 }
 
 func start(cmd *cobra.Command, args []string) {
-	// TODO: Work your own magic here
-
 	mlog.Info("      _ _     _   _ _ _ ")
 	mlog.Info("     | (_)   | | (_) | |")
 	mlog.Info("   __| |_ ___| |_ _| | |")
@@ -62,6 +55,7 @@ func start(cmd *cobra.Command, args []string) {
 	mlog.Info(" | (_| | \\__ \\ |_| | | |")
 	mlog.Info("  \\__,_|_|___/\\__|_|_|_|  v.%v", version)
 	mlog.Info("")
+	mlog.Info("Listening to %v:%v", internal.Config.Server.Host, internal.Config.Server.Port)
 
 	distill.NewSession()
 	r := distill.RegisterEndpoints()

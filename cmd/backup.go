@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/distill/internal/distill"
+	"gitlab.com/welance/oss/distill/internal/distill"
 
 	"github.com/spf13/cobra"
 )

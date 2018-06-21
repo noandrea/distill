@@ -1,10 +1,11 @@
 GOFILES = $(shell find . -name '*.go' -not -path './vendor/*')
 GOPACKAGES = $(shell go list ./...  | grep -v /vendor/)
-GIT_DESCR = $(shell git describe)
+GIT_DESCR = $(shell git describe --always) 
 # build output folder
 OUTPUTFOLDER = dist
 # docker image
-DOCKERIMAGE = welance/distill
+DOCKER_IMAGE = registry.gitlab.com/welance/oss/distill
+DOCKER_TAG = $(shell git describe --always)
 # build paramters
 OS = linux
 ARCH = amd64
@@ -30,7 +31,7 @@ build-dist: $(GOFILES)
 test: test-all
 
 test-all:
-	@go test -v $(GOPACKAGES)
+	@go test -v $(GOPACKAGES) -coverprofile .testCoverage.txt
 
 bench: bench-all
 
@@ -53,16 +54,17 @@ docker-build: build-dist
 	@echo copy resources
 	@cp configs/settings.docker.yaml $(OUTPUTFOLDER)/settings.yaml
 	@echo build image
-	docker build -t $(DOCKERIMAGE) -f ./build/docker/Dockerfile .
+	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f ./build/docker/Dockerfile .
 	@echo done
 
 docker-push: docker-build
 	@echo push image
-	docker push $(DOCKERIMAGE)
+	docker tag $(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_IMAGE):latest
+	docker push $(DOCKER_IMAGE)
 	@echo done
 
 docker-run: 
-	@docker run -p 1804:1804 $(DOCKERIMAGE) 
+	@docker run -p 1804:1804 $(DOCKER_IMAGE) 
 
 debug-start:
 	@go run main.go -c configs/settings.sample.yaml --debug start

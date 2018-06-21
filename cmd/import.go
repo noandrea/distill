@@ -20,7 +20,7 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/welance/distill/internal/distill"
+	"gitlab.com/welance/oss/distill/internal/distill"
 )
 
 // importCmd represents the import command
