@@ -67,32 +67,9 @@ func RegisterEndpoints() (router *chi.Mux) {
 			http.Error(w, "URL not found", 404)
 		})
 		// handle url setup
-		r.Post("/short", func(w http.ResponseWriter, r *http.Request) {
-			urlReq := &URLReq{}
-			if err := render.Bind(r, urlReq); err != nil {
-				render.Render(w, r, ErrInvalidRequest(err, err.Error()))
-				return
-			}
-			// retrieve the forceAlphabet and forceLength
-			forceAlphabet, forceLenght := false, false
-			fA := chi.URLParam(r, "forceAlphabet")
-			fL := chi.URLParam(r, "forceLenght")
-			if fA == "1" {
-				forceAlphabet = true
-			}
-			if fL == "1" {
-				forceLenght = true
-			}
-			// upsert the data
-			id, err := UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
-			mlog.Trace("creted %v", id)
-			// TODO: check the actual error
-			if err != nil {
-				render.Render(w, r, ErrInvalidRequest(err, err.Error()))
-				return
-			}
-			render.JSON(w, r, ShortID{ID: id})
-		})
+		r.Post("/short", handleShort)
+		// implement kutt.it endpoint
+		r.Post("/url/submit", handleShort)
 
 		// delete an id
 		r.Delete("/short/{ID}", func(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +93,33 @@ func RegisterEndpoints() (router *chi.Mux) {
 //   _| |  | |_  _/ /   \ \_  _| |_\   |_  _| |_.' /_| |__/ | _| |__/ | _| |  \ \_| \____) |
 //  |____||____||____| |____||_____|\____||______.'|________||________||____| |___|\______.'
 //
+
+func handleShort(w http.ResponseWriter, r *http.Request) {
+	urlReq := &URLReq{}
+	if err := render.Bind(r, urlReq); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
+		return
+	}
+	// retrieve the forceAlphabet and forceLength
+	forceAlphabet, forceLenght := false, false
+	fA := chi.URLParam(r, "forceAlphabet")
+	fL := chi.URLParam(r, "forceLenght")
+	if fA == "1" {
+		forceAlphabet = true
+	}
+	if fL == "1" {
+		forceLenght = true
+	}
+	// upsert the data
+	id, err := UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
+	mlog.Trace("creted %v", id)
+	// TODO: check the actual error
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
+		return
+	}
+	render.JSON(w, r, ShortID{ID: id})
+}
 
 func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
