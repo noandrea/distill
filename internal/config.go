@@ -32,7 +32,6 @@ type ShortIDConfig struct {
 // TuningConfig fine tuning configuration
 type TuningConfig struct {
 	StatsEventsWorkerNum   int     `yaml:"statsEventsWorkerNum"`
-	StatsEventsQueueSize   int     `yaml:"statsEventsQueueSize"`
 	StatsCaheSize          int     `yaml:"statsCacheSize"`
 	DbPurgeWritesCount     int     `yaml:"dbPurgeWritesCount"`
 	DbGCDeletesCount       int     `yaml:"dbGCDeletesCount"`
@@ -67,7 +66,6 @@ func (c *ConfigSchema) Defaults() {
 	common.DefaultIfEmptyInt(&c.ShortID.Length, 6)
 
 	// For tuning
-	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsQueueSize, 2048)
 	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsWorkerNum, 1)
 	common.DefaultIfEmptyInt(&c.Tuning.StatsCaheSize, 1024)
 	common.DefaultIfEmptyInt(&c.Tuning.DbPurgeWritesCount, 2000)

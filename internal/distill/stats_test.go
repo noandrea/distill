@@ -72,7 +72,8 @@ func Test_loadGlobalStatistics(t *testing.T) {
 			}
 			CloseSession()
 			NewSession()
-			gotS, err := loadGlobalStatistics()
+			gotS := &Statistics{}
+			err := loadGlobalStatistics(gotS)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("loadGlobalStatistics() error = %v, wantErr %v", err, tt.wantErr)
 				return

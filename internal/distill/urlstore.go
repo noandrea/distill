@@ -19,6 +19,14 @@ const (
 )
 
 var (
+	// initialize stats keys
+	statsKeyGlobalURLCount = keyGlobalStat("distill_global_url_count")
+	statsKeyGlobalGetCount = keyGlobalStat("distill_global_get_count")
+	statsKeyGlobalDelCount = keyGlobalStat("distill_global_del_count")
+	statsKeyGlobalUpdCount = keyGlobalStat("distill_global_upd_count")
+)
+
+var (
 	db *badger.DB
 	uc gcache.Cache
 )
@@ -55,9 +63,43 @@ func CloseSession() {
 	db.Close()
 }
 
+// whenRemoved gets called by the memory cache
+// it will check the value, if the value is nil
+// means that the key has been deleted
+// so it will delete it also from the persistent store
 func whenRemoved(key, value interface{}) {
+	if value == nil {
+		Delete(key.(string))
+		return
+	}
 	ui := value.(*URLInfo)
 	Upsert(ui)
+}
+
+// SaveStats write the URL's statistics
+func SaveStats(s *Statistics) (err error) {
+	err = db.Update(func(txn *badger.Txn) (err error) {
+		// find all the urls
+		dbSetInt64(txn, statsKeyGlobalURLCount, s.Urls)
+		dbSetInt64(txn, statsKeyGlobalGetCount, s.Gets)
+		dbSetInt64(txn, statsKeyGlobalDelCount, s.Deletes)
+		dbSetInt64(txn, statsKeyGlobalUpdCount, s.Upserts)
+		// update global statistics
+		return
+	})
+	return
+}
+
+// LoadStats write the URL's statistics
+func LoadStats(s *Statistics) (err error) {
+	err = db.View(func(txn *badger.Txn) (err error) {
+		s.Urls = dbGetInt64(txn, statsKeyGlobalURLCount)
+		s.Gets = dbGetInt64(txn, statsKeyGlobalGetCount)
+		s.Deletes = dbGetInt64(txn, statsKeyGlobalDelCount)
+		s.Upserts = dbGetInt64(txn, statsKeyGlobalUpdCount)
+		return
+	})
+	return
 }
 
 // Insert an url into the the urlstore
