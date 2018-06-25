@@ -1,6 +1,8 @@
 package common
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestIsEmptyStr(t *testing.T) {
 	type args struct {

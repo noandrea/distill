@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -61,7 +60,6 @@ type URLReq struct {
 
 // Statistics contains the global statistics
 type Statistics struct {
-	mutex   sync.Mutex
 	Urls    int64 `json:"urls"`
 	Gets    int64 `json:"gets"`
 	Upserts int64 `json:"upserts"`
