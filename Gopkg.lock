@@ -16,8 +16,8 @@
 [[projects]]
   name = "github.com/dgraph-io/badger"
   packages = [".","options","protos","skl","table","y"]
-  revision = "3ff1bfbb11c02c78c11269096669396c2d2cbbd3"
-  version = "v1.5.0"
+  revision = "690400e629977977ecddfa8ab3a7f9285e1041a8"
+  version = "v1.5.1"
 
 [[projects]]
   branch = "master"
@@ -160,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b4e4735f721cf82b5902fa88cd11db3500366ebd67c3343b58a1555b3bdd45ba"
+  inputs-digest = "dc7958cef7ce29cd96456bdb0043a62dd32fe48ae9443db2d9a45cec739f0a6e"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,9 +1,12 @@
-image: sjdweb/go-docker-build:1.10
+image: welance/build-golang:1.10
 
 stages:
   - test
   - build
   - publish
+
+variables:
+  DOCKER_HOST: docker
 
 before_script:
   - cd $GOPATH/src
@@ -24,12 +27,45 @@ unit_tests:
   script:
     - make test
 
-build:
+build-linux:
   stage: build
   script:
-    - make docker
+    - make build OS=linux
+  artifacts:
+    paths:
+      - dist
 
-docker-build:
-  stage: publish
+build-darwin:
+  stage: build
   script:
-    - make docker-push
+    - make build OS=darwin
+  artifacts:
+    paths:
+      - dist
+
+build-windows:
+  stage: build
+  script:
+    - make build OS=windows
+  artifacts:
+    paths:
+      - dist
+
+build-docker:
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - make docker-build TAG=$CI_COMMIT_TAG
+  only:
+    - tags
+
+publish-docker:
+  stage: publish
+  services:
+    - docker:dind
+  script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+    - make docker-push TAG=$CI_COMMIT_TAG
+  only:
+    - tags

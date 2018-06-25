@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	gonanoid "github.com/matoous/go-nanoid"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
+	"gitlab.com/welance/oss/distill/pkg/common"
 )
 
 // generateID generates a new id
@@ -20,7 +20,7 @@ func generateID() (shortID string) {
 	a := internal.Config.ShortID.Alphabet
 	l := internal.Config.ShortID.Length
 	// a and l are validated before
-	shortID, _ = gonanoid.Generate(a, l)
+	shortID, _ = common.RandomString(a, l)
 	return
 }
 
@@ -175,7 +175,7 @@ func ImportCSV(inFile string) (rows int, err error) {
 			mlog.Error(err)
 			break
 		}
-		if rows == 0 && record[0] == "url" {
+		if rows == 0 && common.IsEqStr(record[0], "url") {
 			// header, skip
 			continue
 		}

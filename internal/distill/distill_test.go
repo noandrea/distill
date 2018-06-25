@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/welance/oss/distill/pkg/common"
+
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
 )
 
 func setupLog() {
@@ -28,12 +30,14 @@ func buildConifgTest() {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:   6,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -44,12 +48,14 @@ func buildConifgPanicTest() {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:   6,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -60,6 +66,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet:    alphabet,
@@ -71,6 +78,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 			StatsEventsWorkerNum: 2,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -81,6 +89,7 @@ func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 	internal.Config = internal.ConfigSchema{
 		Server: internal.ServerConfig{
 			DbPath: path,
+			APIKey: common.GenerateSecret(),
 		},
 		ShortID: internal.ShortIDConfig{
 			Alphabet:    "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
@@ -93,6 +102,7 @@ func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 			StatsEventsWorkerNum: 20,
 		},
 	}
+	internal.Config.Defaults()
 	internal.Config.Validate()
 }
 
@@ -477,7 +487,7 @@ func TestExpireRequestsUrl(t *testing.T) {
 		})
 	}
 	// get the stats
-	time.Sleep(time.Duration(10) * time.Millisecond)
+	//TODO: time.Sleep(time.Duration(10) * time.Millisecond)
 	s := GetStats()
 	t.Log(s)
 	if s.Urls != 2 {
@@ -493,16 +503,16 @@ func TestExpireTTLUrl(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "noexpire",
+			name:    "noexpire w1",
 			wantErr: false,
 			wait:    1,
 			param: URLReq{
-				URL: "https://ilij.li/?param=noexpire",
+				URL: "https://ilij.li/?param=noexpireA",
 				TTL: 0,
 			},
 		},
 		{
-			name:    "noexpire",
+			name:    "noexpire w2",
 			wantErr: false,
 			wait:    2,
 			param: URLReq{
@@ -512,7 +522,7 @@ func TestExpireTTLUrl(t *testing.T) {
 			},
 		},
 		{
-			name:    "expire1",
+			name:    "expire w3",
 			wantErr: true,
 			wait:    3,
 			param: URLReq{
@@ -521,9 +531,9 @@ func TestExpireTTLUrl(t *testing.T) {
 			},
 		},
 		{
-			name:    "expire10",
+			name:    "expire w4",
 			wantErr: true,
-			wait:    3,
+			wait:    4,
 			param: URLReq{
 				URL:         "https://ilij.li/?param=expire10",
 				MaxRequests: 2,
@@ -538,11 +548,14 @@ func TestExpireTTLUrl(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := UpsertURL(&tt.param, true, true, time.Now())
-			mlog.Info("-- upsert %s --", id)
+			//mlog.Info("-- upsert %s --", id)
 			// consume all the requests
 			time.Sleep(time.Duration(tt.wait) * time.Second)
+			now := time.Now()
 			_, err = GetURLRedirect(id)
-			mlog.Info("-- << end  %s --", id)
+			u, _ := GetURLInfo(id)
+			fmt.Println(tt.name, tt.wantErr, "\nbat", u.BountAt, "\nexp", u.ExpireOn, "\nnow", now.UTC(), "\ndif", now.Sub(u.BountAt))
+			//mlog.Info("-- << end  %s --", id)
 			// this should be a not found now for the expired
 			hasErr := (err != nil)
 			if tt.wantErr != hasErr {
@@ -552,7 +565,6 @@ func TestExpireTTLUrl(t *testing.T) {
 		})
 	}
 	// get the stats
-	time.Sleep(time.Duration(10) * time.Millisecond)
 	s := GetStats()
 	t.Log(s)
 	if s.Urls != 2 {

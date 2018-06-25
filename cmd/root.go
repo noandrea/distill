@@ -22,11 +22,12 @@ import (
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/welance/distill/internal"
+	"gitlab.com/welance/oss/distill/internal"
+	"gitlab.com/welance/oss/distill/pkg/common"
 )
 
 var cfgFile, logFile, version string
-var profile, debug bool
+var profile, debug, generateConfigOnly bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -56,6 +57,8 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/distill/settings.yaml)")
 	RootCmd.PersistentFlags().StringVar(&logFile, "log", "", "set a logging file, default stdout")
 	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug")
+	RootCmd.PersistentFlags().BoolVar(&generateConfigOnly, "generate-config", false, "print the default configuration file and exit")
+
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -69,10 +72,16 @@ func initConfig() {
 	mlog.Start(loglevel, logFile)
 	mlog.DefaultFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 
+	// if only generate config
+	if generateConfigOnly {
+
+	}
+
 	// set configuration paramteres
 	viper.SetConfigName("settings")     // name of config file (without extension)
 	viper.AddConfigPath("/etc/distill") // adding home directory as first search path
 	viper.AddConfigPath("./configs")
+	viper.AddConfigPath(".")
 	viper.AutomaticEnv() // read in environment variables that match
 	// if there is the config file read it
 	if len(cfgFile) > 0 { // enable ability to specify config file via flag
@@ -81,10 +90,20 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		mlog.Info("Using config file: %s", viper.ConfigFileUsed())
+		mlog.Info("Using config file: %v", viper.ConfigFileUsed())
 		viper.Unmarshal(&internal.Config)
+		internal.Config.Defaults()
 		internal.Config.Validate()
 	} else {
-		mlog.Fatalf("Configuration file not found!! %v", cfgFile)
+		switch err.(type) {
+		case viper.ConfigFileNotFoundError:
+			if do := common.AskYes("A configuration file was not found, would you like to generate one?", true); do {
+				internal.GenerateDefaultConfig("settings.yaml", version)
+				fmt.Println("Configuration settings.yaml created")
+				return
+			}
+		}
+		fmt.Println("Configuration file not found!!")
+		os.Exit(1)
 	}
 }
