@@ -72,8 +72,9 @@ func Test_loadGlobalStatistics(t *testing.T) {
 			}
 			CloseSession()
 			NewSession()
-			gotS := &Statistics{}
-			err := loadGlobalStatistics(gotS)
+
+			err := LoadStats()
+			gotS := GetStats()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("loadGlobalStatistics() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -84,7 +85,7 @@ func Test_loadGlobalStatistics(t *testing.T) {
 
 			// alsot test reset
 			gotS.Deletes = 0
-			err = resetGlobalStatistics()
+			err = ResetStats()
 			if err != nil {
 				t.Errorf("resetGlobalStatistics() error = %v, wantErr %v", err, false)
 				return

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
@@ -27,8 +28,10 @@ var (
 )
 
 var (
-	db *badger.DB
-	uc gcache.Cache
+	db  *badger.DB
+	uc  gcache.Cache
+	st  *Statistics
+	stM sync.Mutex
 )
 
 // NewSession opens the underling storage
@@ -50,7 +53,7 @@ func NewSession() {
 		ARC().
 		Build()
 	// inintialize statistics
-	err = NewStatistics()
+	err = LoadStats()
 	if err != nil {
 		mlog.Fatal(err)
 	}
@@ -58,7 +61,7 @@ func NewSession() {
 
 // CloseSession closes the underling storage
 func CloseSession() {
-	StopStatistics()
+	SaveStats()
 	uc.Purge()
 	db.Close()
 }
@@ -77,13 +80,13 @@ func whenRemoved(key, value interface{}) {
 }
 
 // SaveStats write the URL's statistics
-func SaveStats(s *Statistics) (err error) {
+func SaveStats() (err error) {
 	err = db.Update(func(txn *badger.Txn) (err error) {
 		// find all the urls
-		dbSetInt64(txn, statsKeyGlobalURLCount, s.Urls)
-		dbSetInt64(txn, statsKeyGlobalGetCount, s.Gets)
-		dbSetInt64(txn, statsKeyGlobalDelCount, s.Deletes)
-		dbSetInt64(txn, statsKeyGlobalUpdCount, s.Upserts)
+		dbSetInt64(txn, statsKeyGlobalURLCount, st.Urls)
+		dbSetInt64(txn, statsKeyGlobalGetCount, st.Gets)
+		dbSetInt64(txn, statsKeyGlobalDelCount, st.Deletes)
+		dbSetInt64(txn, statsKeyGlobalUpdCount, st.Upserts)
 		// update global statistics
 		return
 	})
@@ -91,15 +94,58 @@ func SaveStats(s *Statistics) (err error) {
 }
 
 // LoadStats write the URL's statistics
-func LoadStats(s *Statistics) (err error) {
+func LoadStats() (err error) {
+	// initialize object
+	st = &Statistics{}
 	err = db.View(func(txn *badger.Txn) (err error) {
-		s.Urls = dbGetInt64(txn, statsKeyGlobalURLCount)
-		s.Gets = dbGetInt64(txn, statsKeyGlobalGetCount)
-		s.Deletes = dbGetInt64(txn, statsKeyGlobalDelCount)
-		s.Upserts = dbGetInt64(txn, statsKeyGlobalUpdCount)
+		st.Urls = dbGetInt64(txn, statsKeyGlobalURLCount)
+		st.Gets = dbGetInt64(txn, statsKeyGlobalGetCount)
+		st.Deletes = dbGetInt64(txn, statsKeyGlobalDelCount)
+		st.Upserts = dbGetInt64(txn, statsKeyGlobalUpdCount)
 		return
 	})
 	return
+}
+
+// UpdateStats uppdate urls statistics
+func UpdateStats(s Statistics) {
+	stM.Lock()
+	defer stM.Unlock()
+	st.Urls += s.Urls
+	st.Gets += s.Gets
+	st.Deletes += s.Deletes
+	st.Upserts += s.Upserts
+}
+
+// ResetStats reset global statistcs
+func ResetStats() (err error) {
+	stM.Lock()
+	defer stM.Unlock()
+	st = &Statistics{}
+	// iterate over the urls
+	i := NewURLIterator()
+	for i.HasNext() {
+		u, err := i.NextURL()
+		if err != nil {
+			mlog.Warning("Warning looping through the URLs")
+		}
+		st.Urls++
+		st.Upserts++
+		st.Gets += u.Counter
+	}
+	// close the iterator
+	i.Close()
+	// run the update
+	err = SaveStats()
+	if err != nil {
+		mlog.Warning("Error while rest stats %v", err)
+	}
+	return
+}
+
+// GetStats get the statistics
+func GetStats() (s *Statistics) {
+	return st
 }
 
 // Insert an url into the the urlstore

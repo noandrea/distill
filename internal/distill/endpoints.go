@@ -49,7 +49,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 			render.JSON(w, r, *GetStats())
 		})
 		r.Delete("/stats", func(w http.ResponseWriter, r *http.Request) {
-			err := resetGlobalStatistics()
+			err := ResetStats()
 			if err != nil {
 				render.Render(w, r, ErrInternalError(err, err.Error()))
 				return
