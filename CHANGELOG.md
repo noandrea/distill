@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.2.0] - 2018-06-26
+### Added
+- Add restore of backup at start time
+
+### Fixed
+- Unmarshalling csv format
+
+
 ## [0.1.0] - 2018-06-25
 ### Added
 - First stable release
