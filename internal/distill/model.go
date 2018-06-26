@@ -113,8 +113,8 @@ func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
 	if pl != 7 {
 		return fmt.Errorf("Invalid backup record! record corrupted")
 	}
-	u.URL = pieces[0]
-	u.ID = pieces[1]
+	u.ID = pieces[0]
+	u.URL = pieces[1]
 	if u.BountAt, err = pTime(pieces, 2, pl); err != nil {
 		return
 	}
