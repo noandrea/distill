@@ -46,7 +46,10 @@ func restore(cmd *cobra.Command, args []string) {
 	if _, err := os.Stat(abp); os.IsNotExist(err) {
 		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
 	}
-	if err = distill.Restore(abp); err != nil {
+	if count, err := distill.Restore(abp); err != nil {
 		mlog.Fatalf("Error restoring backup from %s: %v", backupFile, err)
+	} else {
+		mlog.Info("Restored %d URLs from %s ", count, backupFile)
 	}
+
 }
