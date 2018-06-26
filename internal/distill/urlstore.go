@@ -277,20 +277,20 @@ func Backup(outFile string) (err error) {
 }
 
 // Restore the database from a backup file
-func Restore(inFile string) (err error) {
+func Restore(inFile string) (count int, err error) {
 	ext := filepath.Ext(inFile)
 	switch ext {
 	case backupExtBin:
 		fp, err := os.Open(inFile)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		db.Load(fp)
 		fp.Close()
 	case backupExtCsv:
 		fp, err := os.Open(inFile)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		csvR := csv.NewReader(fp)
 		for {
@@ -308,6 +308,7 @@ func Restore(inFile string) (err error) {
 			if err = Upsert(u); err != nil {
 				break
 			}
+			count++
 		}
 		fp.Close()
 	default:

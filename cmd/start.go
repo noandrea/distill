@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
@@ -32,6 +33,8 @@ var startCmd = &cobra.Command{
 	Run:   start,
 }
 
+var restoreFile string
+
 func init() {
 	RootCmd.AddCommand(startCmd)
 
@@ -43,8 +46,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
+	startCmd.Flags().StringVarP(&restoreFile, "restore", "r", "", "Restore data from file before starting")
 }
 
 func start(cmd *cobra.Command, args []string) {
@@ -58,6 +60,13 @@ func start(cmd *cobra.Command, args []string) {
 	mlog.Info("Listening to %v:%v", internal.Config.Server.Host, internal.Config.Server.Port)
 
 	distill.NewSession()
+	if len(strings.TrimSpace(restoreFile)) > 0 {
+		count, err := distill.Restore(restoreFile)
+		if err != nil {
+			mlog.Fatalf("Error restoring URLs from %s: %v ", restoreFile, err)
+		}
+		mlog.Info("Restored %d URLs from %s ", count, restoreFile)
+	}
 	r := distill.RegisterEndpoints()
 	http.ListenAndServe(fmt.Sprintf("%s:%d", internal.Config.Server.Host, internal.Config.Server.Port), r)
 }
