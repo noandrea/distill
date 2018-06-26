@@ -701,7 +701,7 @@ func TestBackupRestore(t *testing.T) {
 				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			err = Restore(tt.args.bckFile)
+			_, err = Restore(tt.args.bckFile)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Restore() error = %v, wantErr %v", err, tt.wantErr)
 				return
