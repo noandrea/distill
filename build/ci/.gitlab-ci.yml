@@ -9,9 +9,9 @@ variables:
   DOCKER_HOST: docker
 
 before_script:
-  - cd $GOPATH/src
-  - mkdir -p gitlab.com/$CI_PROJECT_NAMESPACE
-  - cd gitlab.com/$CI_PROJECT_NAMESPACE
+  # - cd $GOPATH/src
+  - mkdir -p /src/gitlab.com/$CI_PROJECT_NAMESPACE
+  - cd /src/gitlab.com/$CI_PROJECT_NAMESPACE
   - ln -s $CI_PROJECT_DIR
   - cd $CI_PROJECT_NAME
   - echo -e "machine gitlab.com\nlogin gitlab-ci-token\npassword ${CI_JOB_TOKEN}" > ~/.netrc
