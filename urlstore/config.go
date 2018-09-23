@@ -1,4 +1,4 @@
-package internal
+package urlstore
 
 import (
 	"fmt"
@@ -95,7 +95,7 @@ func (c *ConfigSchema) Validate() {
 	}
 }
 
-// Config sytem configuration
+// Config system configuration
 var Config ConfigSchema
 
 // GenerateDefaultConfig generate a default configuration file an writes it in the outFile

@@ -1,4 +1,4 @@
-package distill
+package urlstore
 
 import (
 	"encoding/csv"
@@ -11,14 +11,13 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/oss/distill/internal"
 	"gitlab.com/welance/oss/distill/pkg/common"
 )
 
 // generateID generates a new id
 func generateID() (shortID string) {
-	a := internal.Config.ShortID.Alphabet
-	l := internal.Config.ShortID.Length
+	a := Config.ShortID.Alphabet
+	l := Config.ShortID.Length
 	// a and l are validated before
 	shortID, _ = common.RandomString(a, l)
 	return
@@ -49,12 +48,12 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
 	if u.ExpireOn.IsZero() {
 		// global expiration
-		u.ExpireOn = calculateExpiration(u, internal.Config.ShortID.TTL, internal.Config.ShortID.ExpireOn)
+		u.ExpireOn = calculateExpiration(u, Config.ShortID.TTL, Config.ShortID.ExpireOn)
 	}
 	// set max requests, the local version always has priority
 	u.MaxRequests = url.MaxRequests
 	if u.MaxRequests == 0 {
-		u.MaxRequests = internal.Config.ShortID.MaxRequests
+		u.MaxRequests = Config.ShortID.MaxRequests
 	}
 	// cleanup the string id
 	u.ID = strings.TrimSpace(url.ID)
@@ -63,14 +62,14 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 		err = Insert(u)
 	} else {
 		// TODO: check longest allowed key in badger
-		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(internal.Config.ShortID.Alphabet))
+		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(Config.ShortID.Alphabet))
 		m, _ := regexp.MatchString(p, url.ID)
 		if forceAlphabet && m {
 			err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
 			return "", err
 		}
-		if forceLength && len(url.ID) != internal.Config.ShortID.Length {
-			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), internal.Config.ShortID.Length)
+		if forceLength && len(url.ID) != Config.ShortID.Length {
+			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), Config.ShortID.Length)
 			return "", err
 		}
 		err = Upsert(u)
