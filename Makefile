@@ -67,4 +67,4 @@ docker-run:
 	@docker run -p 1804:1804 $(DOCKER_IMAGE) 
 
 debug-start:
-	@go run main.go -c configs/settings.sample.yaml --debug start
+	@go run main.go -c examples/settings.yaml --debug start

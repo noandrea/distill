@@ -1,4 +1,5 @@
-package distill
+// Package web provides the api endpoints for the urstore
+package web
 
 import (
 	"crypto/subtle"
@@ -7,7 +8,8 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/oss/distill/internal"
+
+	"gitlab.com/welance/oss/distill/urlstore"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -34,10 +36,10 @@ func RegisterEndpoints() (router *chi.Mux) {
 	router.Mount("/profile", middleware.Profiler())
 
 	// health check route
-	router.Get("/health-check", healthCheckHanlder)
+	router.Get("/health-check", healthCheckHandler)
 	// redirect root to the configured url
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, internal.Config.Server.RootRedirect, 302)
+		http.Redirect(w, r, urlstore.Config.Server.RootRedirect, 302)
 	})
 	// shortener redirect
 	router.Get("/{ID}", handleGetURL)
@@ -46,41 +48,25 @@ func RegisterEndpoints() (router *chi.Mux) {
 		r.Use(apiContext)
 		// handle global statistics
 		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
-			render.JSON(w, r, *GetStats())
+			render.JSON(w, r, *urlstore.GetStats())
 		})
 		r.Delete("/stats", func(w http.ResponseWriter, r *http.Request) {
-			err := ResetStats()
+			err := urlstore.ResetStats()
 			if err != nil {
 				render.Render(w, r, ErrInternalError(err, err.Error()))
 				return
 			}
-			render.JSON(w, r, GetStats())
+			render.JSON(w, r, urlstore.GetStats())
 		})
 		// handle url statistics
-		r.Get("/stats/{ID}", func(w http.ResponseWriter, r *http.Request) {
-			shortID := chi.URLParam(r, "ID")
-			if urlInfo, err := GetURLInfo(shortID); err == nil {
-				// send redirect
-				render.JSON(w, r, urlInfo)
-				return
-			}
-			http.Error(w, "URL not found", 404)
-		})
+		r.Get("/stats/{ID}", handleStatsURL)
 		// handle url setup
 		r.Post("/short", handleShort)
 		// implement kutt.it endpoint
 		r.Post("/url/submit", handleShort)
-
 		// delete an id
-		r.Delete("/short/{ID}", func(w http.ResponseWriter, r *http.Request) {
-			shortID := chi.URLParam(r, "ID")
-			err := DeleteURL(shortID)
-			if err != nil {
-				render.Render(w, r, ErrNotFound(err, "URL id not found"))
-				return
-			}
-			render.JSON(w, r, ShortID{ID: shortID})
-		})
+		r.Delete("/short/{ID}", handleDeleteURL)
+		// backup
 	})
 
 	return router
@@ -95,7 +81,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 //
 
 func handleShort(w http.ResponseWriter, r *http.Request) {
-	urlReq := &URLReq{}
+	urlReq := &urlstore.URLReq{}
 	if err := render.Bind(r, urlReq); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 		return
@@ -111,19 +97,19 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 		forceLenght = true
 	}
 	// upsert the data
-	id, err := UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
+	id, err := urlstore.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
 	mlog.Trace("creted %v", id)
 	// TODO: check the actual error
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 		return
 	}
-	render.JSON(w, r, ShortID{ID: id})
+	render.JSON(w, r, urlstore.ShortID{ID: id})
 }
 
 func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	targetURL, err := GetURLRedirect(shortID)
+	targetURL, err := urlstore.GetURLRedirect(shortID)
 	if err != nil {
 		http.Error(w, "URL not found", 404)
 	}
@@ -132,8 +118,28 @@ func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func healthCheckHanlder(w http.ResponseWriter, r *http.Request) {
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("good"))
+}
+
+func handleStatsURL(w http.ResponseWriter, r *http.Request) {
+	shortID := chi.URLParam(r, "ID")
+	if urlInfo, err := urlstore.GetURLInfo(shortID); err == nil {
+		// send redirect
+		render.JSON(w, r, urlInfo)
+		return
+	}
+	http.Error(w, "URL not found", 404)
+}
+
+func handleDeleteURL(w http.ResponseWriter, r *http.Request) {
+	shortID := chi.URLParam(r, "ID")
+	err := urlstore.DeleteURL(shortID)
+	if err != nil {
+		render.Render(w, r, ErrNotFound(err, "URL id not found"))
+		return
+	}
+	render.JSON(w, r, urlstore.ShortID{ID: shortID})
 }
 
 //   ____    ____   ______     ______    ______
@@ -143,16 +149,6 @@ func healthCheckHanlder(w http.ResponseWriter, r *http.Request) {
 //   _| |_\/_| |_ | \____) |\ `.___]  || \____) |
 //  |_____||_____| \______.' `._____.'  \______.'
 //
-
-// Bind will run after the unmarshalling is complete
-func (u *URLReq) Bind(r *http.Request) error {
-	return nil
-}
-
-// Bind will run after the unmarshalling is complete
-func (u *ShortID) Bind(r *http.Request) error {
-	return nil
-}
 
 // ErrInvalidRequest render an invalid request
 func ErrInvalidRequest(err error, message string) render.Renderer {
@@ -214,8 +210,8 @@ type ErrResponse struct {
 // apiContext verify the api key header
 func apiContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiKey := r.Header.Get(internal.Config.Tuning.APIKeyHeaderName)
-		keyMatch := subtle.ConstantTimeCompare([]byte(apiKey), []byte(internal.Config.Server.APIKey))
+		apiKey := r.Header.Get(urlstore.Config.Tuning.APIKeyHeaderName)
+		keyMatch := subtle.ConstantTimeCompare([]byte(apiKey), []byte(urlstore.Config.Server.APIKey))
 		if keyMatch == 0 {
 			http.Error(w, http.StatusText(403), 403)
 			return

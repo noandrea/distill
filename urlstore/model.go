@@ -1,8 +1,9 @@
-package distill
+package urlstore
 
 import (
 	"encoding/binary"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -84,6 +85,16 @@ func (u URLInfo) ExpirationDate() time.Time {
 func (u URLInfo) String() string {
 	//return fmt.Sprint("%#v", u)
 	return fmt.Sprintf("%v c:%d %v [mr:%d, exp:%v] --> %v", u.ID, u.Counter, u.BountAt.Format(time.Stamp), u.MaxRequests, u.ExpireOn.Format(time.RFC3339Nano), u.URL)
+}
+
+// Bind will run after the unmarshalling is complete
+func (u *URLReq) Bind(r *http.Request) error {
+	return nil
+}
+
+// Bind will run after the unmarshalling is complete
+func (u *ShortID) Bind(r *http.Request) error {
+	return nil
 }
 
 //     ______   ______  ____   ____

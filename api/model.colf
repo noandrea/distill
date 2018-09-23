@@ -1,5 +1,5 @@
 // Package demo offers a demonstration.
-package distill
+package urlstore
 
 // URLInfo contains the data associated to an id
 type URLInfo struct {

@@ -1,4 +1,5 @@
-package distill
+// Package urlstore provides the main functionalities for distill
+package urlstore
 
 import (
 	"encoding/csv"
@@ -11,7 +12,6 @@ import (
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/oss/distill/internal"
 )
 
 const (
@@ -39,15 +39,15 @@ func NewSession() {
 	// open the badger database
 	opts := badger.DefaultOptions
 	opts.SyncWrites = true
-	opts.Dir = internal.Config.Server.DbPath
-	opts.ValueDir = internal.Config.Server.DbPath
+	opts.Dir = Config.Server.DbPath
+	opts.ValueDir = Config.Server.DbPath
 	var err error
 	db, err = badger.Open(opts)
 	if err != nil {
 		mlog.Fatal(err)
 	}
 	// initialzie internal cache
-	uc = gcache.New(internal.Config.Tuning.URLCaheSize).
+	uc = gcache.New(Config.Tuning.URLCaheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
@@ -233,6 +233,9 @@ func Backup(outFile string) (err error) {
 			return err
 		}
 		ts, err := db.Backup(fp, 0)
+		if err != nil {
+			return err
+		}
 		mlog.Info("Backup completed at %v", ts)
 	case backupExtCsv:
 		err = db.View(func(txn *badger.Txn) (err error) {
@@ -248,7 +251,7 @@ func Backup(outFile string) (err error) {
 
 			// open the iterator
 			opts := badger.DefaultIteratorOptions
-			opts.PrefetchSize = internal.Config.Tuning.BckCSVIterPrefetchSize
+			opts.PrefetchSize = Config.Tuning.BckCSVIterPrefetchSize
 			opts.PrefetchValues = true
 			it := txn.NewIterator(opts)
 			defer it.Close()
@@ -361,7 +364,7 @@ func (i *URLIterator) Close() {
 	i.Transaction.Discard()
 }
 
-// Helper fucntions
+// Helper functions
 
 // dbGet helper functin
 func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
@@ -396,7 +399,7 @@ func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 		return
 	}
 	val, err = item.Value()
-	mlog.Trace("dbGet read %s v:%d ", k, item.Version)
+	mlog.Trace("dbGet read %s v:%d ", k, item.Version())
 	return
 }
 
@@ -406,7 +409,7 @@ func dbGetInt64(txn *badger.Txn, k []byte) (i int64) {
 		return
 	}
 	val, err := item.Value()
-	mlog.Trace("dbGetInt64 read %s v:%d ", k, item.Version)
+	mlog.Trace("dbGetInt64 read %s v:%d ", k, item.Version())
 	if err != nil {
 		val = numberZero
 	}
