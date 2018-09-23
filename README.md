@@ -6,6 +6,10 @@ Another url shortener
 
 [![coverage report](https://gitlab.com/welance/oss/distill/badges/develop/coverage.svg)](https://gitlab.com/welance/oss/distill/commits/develop)
 
+[![GoDoc](https://godoc.org/gitlab.com/welance/oss/distill?status.svg)](https://godoc.org/gitlab.com/welance/oss/distill)
+
+[![Go Report Card](https://goreportcard.com/badge/gitlab.com/welance/oss/distill)](https://goreportcard.com/report/gitlab.com/welance/oss/distill)
+
 ## Motivations
 
 Existing url shorteners are not suitable for a private deploy use or are too complex in terms of requirements.
