@@ -1,4 +1,4 @@
-image: welance/build-golang:1.10
+image: welance/build-golang:1.11
 
 stages:
   - test
@@ -15,7 +15,7 @@ before_script:
   - ln -s $CI_PROJECT_DIR
   - cd $CI_PROJECT_NAME
   - echo -e "machine gitlab.com\nlogin gitlab-ci-token\npassword ${CI_JOB_TOKEN}" > ~/.netrc
-  - dep ensure -vendor-only
+  - go mod download
 
 lint_code:
   stage: test

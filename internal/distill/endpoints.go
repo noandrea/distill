@@ -57,30 +57,14 @@ func RegisterEndpoints() (router *chi.Mux) {
 			render.JSON(w, r, GetStats())
 		})
 		// handle url statistics
-		r.Get("/stats/{ID}", func(w http.ResponseWriter, r *http.Request) {
-			shortID := chi.URLParam(r, "ID")
-			if urlInfo, err := GetURLInfo(shortID); err == nil {
-				// send redirect
-				render.JSON(w, r, urlInfo)
-				return
-			}
-			http.Error(w, "URL not found", 404)
-		})
+		r.Get("/stats/{ID}", handleStatsURL)
 		// handle url setup
 		r.Post("/short", handleShort)
 		// implement kutt.it endpoint
 		r.Post("/url/submit", handleShort)
-
 		// delete an id
-		r.Delete("/short/{ID}", func(w http.ResponseWriter, r *http.Request) {
-			shortID := chi.URLParam(r, "ID")
-			err := DeleteURL(shortID)
-			if err != nil {
-				render.Render(w, r, ErrNotFound(err, "URL id not found"))
-				return
-			}
-			render.JSON(w, r, ShortID{ID: shortID})
-		})
+		r.Delete("/short/{ID}", handleDeleteURL)
+		// backup
 	})
 
 	return router
@@ -134,6 +118,26 @@ func handleGetURL(w http.ResponseWriter, r *http.Request) {
 
 func healthCheckHanlder(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("good"))
+}
+
+func handleStatsURL(w http.ResponseWriter, r *http.Request) {
+	shortID := chi.URLParam(r, "ID")
+	if urlInfo, err := GetURLInfo(shortID); err == nil {
+		// send redirect
+		render.JSON(w, r, urlInfo)
+		return
+	}
+	http.Error(w, "URL not found", 404)
+}
+
+func handleDeleteURL(w http.ResponseWriter, r *http.Request) {
+	shortID := chi.URLParam(r, "ID")
+	err := DeleteURL(shortID)
+	if err != nil {
+		render.Render(w, r, ErrNotFound(err, "URL id not found"))
+		return
+	}
+	render.JSON(w, r, ShortID{ID: shortID})
 }
 
 //   ____    ____   ______     ______    ______
