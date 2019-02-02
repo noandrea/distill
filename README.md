@@ -2,7 +2,7 @@
 
 Another url shortener 
 
-[![pipeline status](https://gitlab.com/welance/oss/distill/badges/develop/pipeline.svg)](https://gitlab.com/welance/oss/distill/commits/develop) [![coverage report](https://gitlab.com/welance/oss/distill/badges/develop/coverage.svg)](https://gitlab.com/welance/oss/distill/commits/develop) [![GoDoc](https://godoc.org/gitlab.com/welance/oss/distill?status.svg)](https://godoc.org/gitlab.com/welance/oss/distill) [![Go Report Card](https://goreportcard.com/badge/gitlab.com/welance/oss/distill)](https://goreportcard.com/report/gitlab.com/welance/oss/distill)
+[![pipeline status](https://github.com/noandrea/distill/badges/develop/pipeline.svg)](https://github.com/noandrea/distill/commits/develop) [![coverage report](https://github.com/noandrea/distill/badges/develop/coverage.svg)](https://github.com/noandrea/distill/commits/develop) [![GoDoc](https://godoc.org/github.com/noandrea/distill?status.svg)](https://godoc.org/github.com/noandrea/distill) [![Go Report Card](https://goreportcard.com/badge/github.com/noandrea/distill)](https://goreportcard.com/report/github.com/noandrea/distill)
 
 ## Motivations
 

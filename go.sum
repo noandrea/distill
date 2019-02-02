@@ -30,6 +30,8 @@ github.com/matoous/go-nanoid v0.0.0-20180109130436-958d370425a1 h1:Ar0OvPWGq9L0C
 github.com/matoous/go-nanoid v0.0.0-20180109130436-958d370425a1/go.mod h1:soqXi4beH2aAljcVvgIDqekDtnM2UZkGl47fniwq3J4=
 github.com/mitchellh/mapstructure v0.0.0-20180220230111-00c29f56e238 h1:+MZW2uvHgN8kYvksEN3f7eFL2wpzk0GxmlFsMybWc7E=
 github.com/mitchellh/mapstructure v0.0.0-20180220230111-00c29f56e238/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
+github.com/noandrea/distill v0.0.0-20180923122941-2d1dec78b84e h1:YXMXfISVfj/YrKOQHJnw4ODFARFKas8hO6lDH4eAnys=
+github.com/noandrea/distill v0.0.0-20180923122941-2d1dec78b84e/go.mod h1:FsQDfK9nxvWZXgYdxpj+6xCQsEvszvpqjkIMuxjAkiY=
 github.com/pelletier/go-toml v1.1.0 h1:cmiOvKzEunMsAxyhXSzpL5Q1CRKpVv0KQsnAIcSEVYM=
 github.com/pelletier/go-toml v1.1.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=

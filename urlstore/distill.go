@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/oss/distill/pkg/common"
+	"github.com/noandrea/distill/pkg/common"
 )
 
 // generateID generates a new id
