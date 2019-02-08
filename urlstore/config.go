@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/welance/oss/distill/pkg/common"
+	"github.com/noandrea/distill/pkg/common"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -58,8 +58,8 @@ func (c *ConfigSchema) Defaults() {
 	common.DefaultIfEmptyStr(&c.Server.Host, "0.0.0.0")
 	common.DefaultIfEmptyInt(&c.Server.Port, 1804)
 	common.DefaultIfEmptyStr(&c.Server.DbPath, "distill.db")
-	common.DefaultIfEmptyStr(&c.Server.RootRedirect, "https://gitlab.com/welance/oss/distill/wikis/welcome")
-	common.DefaultIfEmptyStr(&c.Server.ExpiredRedirect, "https://gitlab.com/welance/oss/distill/wikis/Expired-URL")
+	common.DefaultIfEmptyStr(&c.Server.RootRedirect, "https://github.com/noandrea/distill/wikis/welcome")
+	common.DefaultIfEmptyStr(&c.Server.ExpiredRedirect, "https://github.com/noandrea/distill/wikis/Expired-URL")
 
 	// for short id
 	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
@@ -106,7 +106,7 @@ func GenerateDefaultConfig(outFile, version string) {
 	data := strings.Join([]string{
 		"#",
 		fmt.Sprintf("# Default configuration for Distill v%s", version),
-		"# http://gitlab.com/welance/oss/distill",
+		"# http://github.com/noandrea/distill",
 		"#\n",
 		fmt.Sprintf("%s", b),
 		"#",

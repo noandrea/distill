@@ -6,7 +6,7 @@
 version: '3.1'
 services:
   distill:
-    image: registry.gitlab.com/welance/oss/distill:latest
+    image: registry.github.com/noandrea/distill:latest
     container_name: distill
     restart: unless-stopped
     ports:

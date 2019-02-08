@@ -18,7 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/welance/oss/distill/urlstore"
+	"github.com/noandrea/distill/urlstore"
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"

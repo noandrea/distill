@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package cmd
 
 import (
@@ -19,8 +18,8 @@ import (
 	"net/http"
 	"strings"
 
-  "gitlab.com/welance/oss/distill/urlstore"
-  "gitlab.com/welance/oss/distill/web"
+	"github.com/noandrea/distill/urlstore"
+	"github.com/noandrea/distill/web"
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"

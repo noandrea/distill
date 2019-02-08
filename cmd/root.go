@@ -19,12 +19,12 @@ import (
 	"log"
 	"os"
 
-	"gitlab.com/welance/oss/distill/urlstore"
+	"github.com/noandrea/distill/urlstore"
 
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/welance/oss/distill/pkg/common"
+	"github.com/noandrea/distill/pkg/common"
 )
 
 var cfgFile, logFile, version string

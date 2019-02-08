@@ -1,6 +1,6 @@
 #
 # Default configuration for Distill v0.0.3-ci-14-gd67560a
-# http://gitlab.com/welance/oss/distill
+# http://github.com/noandrea/distill
 #
 
 server:
@@ -8,8 +8,8 @@ server:
   host: 0.0.0.0
   port: 1804
   dbPath: distill.db
-  rootRedirect: https://gitlab.com/welance/oss/distill/wikis/welcome
-  expiredRedirect: https://gitlab.com/welance/oss/distill/wikis/Expired-URL
+  rootRedirect: https://github.com/noandrea/distill/wikis/welcome
+  expiredRedirect: https://github.com/noandrea/distill/wikis/Expired-URL
 shortId:
   alphabet: abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789
   length: 6

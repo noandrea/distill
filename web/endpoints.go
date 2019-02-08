@@ -9,7 +9,7 @@ import (
 
 	"github.com/jbrodriguez/mlog"
 
-	"gitlab.com/welance/oss/distill/urlstore"
+	"github.com/noandrea/distill/urlstore"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
