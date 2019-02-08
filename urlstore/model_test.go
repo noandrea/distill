@@ -1,4 +1,4 @@
-package distill
+package urlstore
 
 import (
 	"reflect"

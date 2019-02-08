@@ -1,4 +1,4 @@
-package distill
+package web
 
 import (
 	"net/http"
@@ -12,13 +12,13 @@ func TestRegisterEndpoints(t *testing.T) {
 		name    string
 		route   string
 		method  string
-		hanlder func(w http.ResponseWriter, r *http.Request)
+		handler func(w http.ResponseWriter, r *http.Request)
 	}{
 		{
 			"hc",
 			"/health-check",
 			"GET",
-			healthCheckHanlder,
+			healthCheckHandler,
 		},
 	}
 
@@ -31,7 +31,7 @@ func TestRegisterEndpoints(t *testing.T) {
 			}
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(tt.hanlder)
+			handler := http.HandlerFunc(tt.handler)
 
 			// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 			// directly and pass in our Request and ResponseRecorder.

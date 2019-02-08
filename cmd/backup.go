@@ -18,8 +18,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/noandrea/distill/urlstore"
+
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/oss/distill/internal/distill"
 
 	"github.com/spf13/cobra"
 )
@@ -55,8 +56,8 @@ func init() {
 }
 
 func backup(cmd *cobra.Command, args []string) {
-	distill.NewSession()
-	defer distill.CloseSession()
+	urlstore.NewSession()
+	defer urlstore.CloseSession()
 	abp, err := filepath.Abs(backupFile)
 	if err != nil {
 		mlog.Fatalf("Invalid path %s: %v", backupFile, err)
@@ -65,7 +66,7 @@ func backup(cmd *cobra.Command, args []string) {
 	if err != nil {
 		mlog.Fatalf("Error create backup path to %s: %v", backupFile, err)
 	}
-	if err = distill.Backup(abp); err != nil {
+	if err = urlstore.Backup(abp); err != nil {
 		mlog.Fatalf("Error create backup at %s: %v", backupFile, err)
 	}
 }

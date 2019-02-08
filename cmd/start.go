@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package cmd
 
 import (
@@ -19,10 +18,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/noandrea/distill/urlstore"
+	"github.com/noandrea/distill/web"
+
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/welance/oss/distill/internal"
-	"gitlab.com/welance/oss/distill/internal/distill"
 )
 
 // startCmd represents the start command
@@ -57,16 +57,16 @@ func start(cmd *cobra.Command, args []string) {
 	mlog.Info(" | (_| | \\__ \\ |_| | | |")
 	mlog.Info("  \\__,_|_|___/\\__|_|_|_|  v.%v", version)
 	mlog.Info("")
-	mlog.Info("Listening to %v:%v", internal.Config.Server.Host, internal.Config.Server.Port)
+	mlog.Info("Listening to %v:%v", urlstore.Config.Server.Host, urlstore.Config.Server.Port)
 
-	distill.NewSession()
+	urlstore.NewSession()
 	if len(strings.TrimSpace(restoreFile)) > 0 {
-		count, err := distill.Restore(restoreFile)
+		count, err := urlstore.Restore(restoreFile)
 		if err != nil {
 			mlog.Fatalf("Error restoring URLs from %s: %v ", restoreFile, err)
 		}
 		mlog.Info("Restored %d URLs from %s ", count, restoreFile)
 	}
-	r := distill.RegisterEndpoints()
-	http.ListenAndServe(fmt.Sprintf("%s:%d", internal.Config.Server.Host, internal.Config.Server.Port), r)
+	r := web.RegisterEndpoints()
+	http.ListenAndServe(fmt.Sprintf("%s:%d", urlstore.Config.Server.Host, urlstore.Config.Server.Port), r)
 }

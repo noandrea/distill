@@ -18,9 +18,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/noandrea/distill/urlstore"
+
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
-	"gitlab.com/welance/oss/distill/internal/distill"
 )
 
 // importCmd represents the import command
@@ -49,8 +50,8 @@ func init() {
 }
 
 func importCsv(cmd *cobra.Command, args []string) {
-	distill.NewSession()
-	defer distill.CloseSession()
+	urlstore.NewSession()
+	defer urlstore.CloseSession()
 	abp, err := filepath.Abs(csvFile)
 	if err != nil {
 		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
@@ -58,7 +59,7 @@ func importCsv(cmd *cobra.Command, args []string) {
 	if _, err = os.Stat(abp); os.IsNotExist(err) {
 		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
 	}
-	if rows, err := distill.ImportCSV(abp); err != nil {
+	if rows, err := urlstore.ImportCSV(abp); err != nil {
 		mlog.Fatalf("Error create backup at %s: %v", csvFile, err)
 	} else {
 		mlog.Info("Import complete, %d url record loaded", rows)

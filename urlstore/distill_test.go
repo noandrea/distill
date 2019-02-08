@@ -1,4 +1,4 @@
-package distill
+package urlstore
 
 import (
 	"fmt"
@@ -10,10 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/welance/oss/distill/pkg/common"
+	"github.com/noandrea/distill/pkg/common"
 
 	"github.com/jbrodriguez/mlog"
-	"gitlab.com/welance/oss/distill/internal"
 )
 
 func setupLog() {
@@ -27,83 +26,83 @@ func buildConifgTest() {
 	// path
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
-	internal.Config = internal.ConfigSchema{
-		Server: internal.ServerConfig{
+	Config = ConfigSchema{
+		Server: ServerConfig{
 			DbPath: path,
 			APIKey: common.GenerateSecret(),
 		},
-		ShortID: internal.ShortIDConfig{
+		ShortID: ShortIDConfig{
 			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:   6,
 		},
 	}
-	internal.Config.Defaults()
-	internal.Config.Validate()
+	Config.Defaults()
+	Config.Validate()
 }
 
 func buildConifgPanicTest() {
 	setupLog()
 	path := " cann not exists / ssa "
 	fmt.Println("test db folder is ", path)
-	internal.Config = internal.ConfigSchema{
-		Server: internal.ServerConfig{
+	Config = ConfigSchema{
+		Server: ServerConfig{
 			DbPath: path,
 			APIKey: common.GenerateSecret(),
 		},
-		ShortID: internal.ShortIDConfig{
+		ShortID: ShortIDConfig{
 			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:   6,
 		},
 	}
-	internal.Config.Defaults()
-	internal.Config.Validate()
+	Config.Defaults()
+	Config.Validate()
 }
 
 func buildConifgTestShortIDParams(alphabet string, length int) {
 	setupLog()
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
-	internal.Config = internal.ConfigSchema{
-		Server: internal.ServerConfig{
+	Config = ConfigSchema{
+		Server: ServerConfig{
 			DbPath: path,
 			APIKey: common.GenerateSecret(),
 		},
-		ShortID: internal.ShortIDConfig{
+		ShortID: ShortIDConfig{
 			Alphabet:    alphabet,
 			Length:      length,
 			TTL:         0,
 			MaxRequests: 0,
 		},
-		Tuning: internal.TuningConfig{
+		Tuning: TuningConfig{
 			StatsEventsWorkerNum: 2,
 		},
 	}
-	internal.Config.Defaults()
-	internal.Config.Validate()
+	Config.Defaults()
+	Config.Validate()
 }
 
 func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
 	setupLog()
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
-	internal.Config = internal.ConfigSchema{
-		Server: internal.ServerConfig{
+	Config = ConfigSchema{
+		Server: ServerConfig{
 			DbPath: path,
 			APIKey: common.GenerateSecret(),
 		},
-		ShortID: internal.ShortIDConfig{
+		ShortID: ShortIDConfig{
 			Alphabet:    "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
 			Length:      6,
 			TTL:         ttl,
 			MaxRequests: maxr,
 			ExpireOn:    expire,
 		},
-		Tuning: internal.TuningConfig{
+		Tuning: TuningConfig{
 			StatsEventsWorkerNum: 20,
 		},
 	}
-	internal.Config.Defaults()
-	internal.Config.Validate()
+	Config.Defaults()
+	Config.Validate()
 }
 
 func TestGenerateID(t *testing.T) {
@@ -121,8 +120,8 @@ func TestGenerateID(t *testing.T) {
 		{"abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 30, "[iIl1o0O]"},
 	}
 	for _, tt := range tests {
-		internal.Config = internal.ConfigSchema{
-			ShortID: internal.ShortIDConfig{
+		Config = ConfigSchema{
+			ShortID: ShortIDConfig{
 				Alphabet: tt.Alphabet,
 				Length:   tt.Length,
 			},
@@ -547,12 +546,12 @@ func TestExpireTTLUrl(t *testing.T) {
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := UpsertURL(&tt.param, true, true, time.Now())
+			id, _ := UpsertURL(&tt.param, true, true, time.Now())
 			//mlog.Info("-- upsert %s --", id)
 			// consume all the requests
 			time.Sleep(time.Duration(tt.wait) * time.Second)
 			now := time.Now()
-			_, err = GetURLRedirect(id)
+			_, err := GetURLRedirect(id)
 			u, _ := GetURLInfo(id)
 			fmt.Println(tt.name, tt.wantErr, "\nbat", u.BountAt, "\nexp", u.ExpireOn, "\nnow", now.UTC(), "\ndif", now.Sub(u.BountAt))
 			//mlog.Info("-- << end  %s --", id)

@@ -1,4 +1,4 @@
-package distill
+package urlstore
 
 import (
 	"fmt"
@@ -83,7 +83,7 @@ func Test_loadGlobalStatistics(t *testing.T) {
 				t.Errorf("loadGlobalStatistics() = %v, want %v", gotS, tt.wantS)
 			}
 
-			// alsot test reset
+			// also test reset
 			gotS.Deletes = 0
 			err = ResetStats()
 			if err != nil {

@@ -4,7 +4,7 @@ GIT_DESCR = $(shell git describe --always)
 # build output folder
 OUTPUTFOLDER = dist
 # docker image
-DOCKER_IMAGE = registry.gitlab.com/welance/oss/distill
+DOCKER_IMAGE = noandrea/distill
 DOCKER_TAG = $(shell git describe --always)
 # build paramters
 OS = linux
@@ -67,4 +67,4 @@ docker-run:
 	@docker run -p 1804:1804 $(DOCKER_IMAGE) 
 
 debug-start:
-	@go run main.go -c configs/settings.sample.yaml --debug start
+	@go run main.go -c examples/settings.yaml --debug start

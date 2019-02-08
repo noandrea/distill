@@ -1,4 +1,4 @@
-package distill
+package urlstore
 
 import (
 	"sync"
@@ -7,7 +7,6 @@ import (
 	"github.com/jbrodriguez/mlog"
 
 	"github.com/dgraph-io/badger"
-	"gitlab.com/welance/oss/distill/internal"
 )
 
 var (
@@ -132,7 +131,7 @@ func runDbMaintenance() {
 
 	// caluclate if gc is necessary
 	deletes := globalStatistics.Deletes
-	gcLimit := internal.Config.Tuning.DbGCDeletesCount
+	gcLimit := Config.Tuning.DbGCDeletesCount
 	gcCount := 0
 	// retrieve the gcCount from the db
 	db.View(func(txn *badger.Txn) (err error) {
@@ -151,7 +150,7 @@ func runDbMaintenance() {
 
 		mlog.Info("")
 
-		db.RunValueLogGC(internal.Config.Tuning.DbGCDiscardRation)
+		db.RunValueLogGC(Config.Tuning.DbGCDiscardRation)
 		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
 		// update the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {

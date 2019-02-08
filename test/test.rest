@@ -2,19 +2,27 @@
 
 
 POST http://localhost:1804/api/short
-X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda
+X-API-KEY: sSftPgEULMt4UWMh8idQgaTiJh9dKlXfdeiB5qcoCxc!ZehVik
 Content-Type: application/json
 
 {
-    "url": "https://hackernews.com"
+    "id": "testtest",
+    "url": "https://hackernews.com",
+    "max_requests": 10,
+    "ttl": 3600 
 }
 
 ###
 
-GET http://localhost:1804/api/stats/qvadbK
-X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda
+GET http://localhost:1804/api/stats/testtest
+X-API-KEY: sSftPgEULMt4UWMh8idQgaTiJh9dKlXfdeiB5qcoCxc!ZehVik
 
 ###
 
-GET http://localhost:1804/qvadbK
-X-API-KEY: naiuraoijodmaojorierjaomdaodorpaokda
+GET http://localhost:1804/testtest
+X-API-KEY: sSftPgEULMt4UWMh8idQgaTiJh9dKlXfdeiB5qcoCxc!ZehVik
+
+###
+
+GET http://aet.li/api/stats
+X-API-KEY: sSftPgEULMt4UWMh8idQgaTiJh9dKlXfdeiB5qcoCxc!ZehVik

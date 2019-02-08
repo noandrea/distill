@@ -19,11 +19,12 @@ import (
 	"log"
 	"os"
 
+	"github.com/noandrea/distill/urlstore"
+
 	"github.com/jbrodriguez/mlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/welance/oss/distill/internal"
-	"gitlab.com/welance/oss/distill/pkg/common"
+	"github.com/noandrea/distill/pkg/common"
 )
 
 var cfgFile, logFile, version string
@@ -91,14 +92,14 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		mlog.Info("Using config file: %v", viper.ConfigFileUsed())
-		viper.Unmarshal(&internal.Config)
-		internal.Config.Defaults()
-		internal.Config.Validate()
+		viper.Unmarshal(&urlstore.Config)
+		urlstore.Config.Defaults()
+		urlstore.Config.Validate()
 	} else {
 		switch err.(type) {
 		case viper.ConfigFileNotFoundError:
 			if do := common.AskYes("A configuration file was not found, would you like to generate one?", true); do {
-				internal.GenerateDefaultConfig("settings.yaml", version)
+				urlstore.GenerateDefaultConfig("settings.yaml", version)
 				fmt.Println("Configuration settings.yaml created")
 				return
 			}

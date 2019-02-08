@@ -33,7 +33,7 @@ func DefaultIfEmptyInt(v *int, defaultV int) {
 	}
 }
 
-// RandomString generate a random string of required lenght an with requested alphabet
+// RandomString generate a random string of required length using alphabet
 func RandomString(alphabet string, length int) (s string, err error) {
 	if IsEmptyStr(alphabet) {
 		err = fmt.Errorf("alphabet must not be empty")
