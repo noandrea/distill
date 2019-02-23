@@ -88,7 +88,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 
 // calculateExpiration calculate the expiration of a url
 // returns the highest date betwwen the date binding + ttl and the date expiration date
-func calculateExpiration(u *URLInfo, ttl int64, expireDate time.Time) (expire time.Time) {
+func calculateExpiration(u *URLInfo, ttl uint64, expireDate time.Time) (expire time.Time) {
 	if ttl > 0 {
 		expire = u.BountAt.Add(time.Duration(ttl) * time.Second)
 	}

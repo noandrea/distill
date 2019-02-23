@@ -54,7 +54,7 @@ func Test_loadGlobalStatistics(t *testing.T) {
 			NewSession()
 			ids := []string{}
 			// run inserts
-			for i := int64(0); i < tt.wantS.Upserts; i++ {
+			for i := uint64(0); i < tt.wantS.Upserts; i++ {
 				id, err := UpsertURL(&URLReq{URL: fmt.Sprint("http://distll.it/?long=", i)}, true, true, time.Now())
 				if err != nil {
 					t.Error(err)
@@ -62,12 +62,12 @@ func Test_loadGlobalStatistics(t *testing.T) {
 				ids = append(ids, id)
 			}
 			// run deletes
-			for i := int64(0); i < tt.wantS.Deletes; i++ {
+			for i := uint64(0); i < tt.wantS.Deletes; i++ {
 				DeleteURL(ids[i])
 			}
 			ids = ids[tt.wantS.Deletes:]
 			// run gets
-			for i := int64(0); i < tt.wantS.Gets; i++ {
+			for i := uint64(0); i < tt.wantS.Gets; i++ {
 				GetURLRedirect(ids[i%tt.wantS.Urls])
 			}
 			CloseSession()

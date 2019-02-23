@@ -154,7 +154,7 @@ func Test_keyGlobalStat(t *testing.T) {
 func Test_arrayconv(t *testing.T) {
 	tests := []struct {
 		name string
-		val  int64
+		val  uint64
 	}{
 		{name: "1", val: 1},
 		{name: "2", val: 2},
@@ -179,7 +179,7 @@ func TestURLInfo_ExpirationDate(t *testing.T) {
 	}
 
 	type fields struct {
-		TTL     int64
+		TTL     uint64
 		BountAt time.Time
 	}
 	tests := []struct {
