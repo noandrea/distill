@@ -31,7 +31,8 @@ build-dist: $(GOFILES)
 test: test-all
 
 test-all:
-	@go test -v $(GOPACKAGES) -coverprofile .testCoverage.txt
+	echo $(GOPACKAGES)
+	@go test $(GOPACKAGES) -coverprofile .testCoverage.txt -cover
 
 bench: bench-all
 
