@@ -4,7 +4,7 @@ GIT_DESCR = $(shell git describe --always)
 # build output folder
 OUTPUTFOLDER = dist
 # docker image
-DOCKER_IMAGE = registry.github.com/noandrea/distill
+DOCKER_IMAGE = noandrea/distill
 DOCKER_TAG = $(shell git describe --always)
 # build paramters
 OS = linux
