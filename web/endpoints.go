@@ -3,17 +3,14 @@ package web
 
 import (
 	"crypto/subtle"
-	"log"
-	"net/http"
-	"time"
-
-	"github.com/jbrodriguez/mlog"
-
-	"github.com/noandrea/distill/urlstore"
-
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"github.com/jbrodriguez/mlog"
+	"github.com/noandrea/distill/urlstore"
+	"log"
+	"net/http"
+	"time"
 )
 
 // RegisterEndpoints register application endpoints

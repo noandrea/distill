@@ -4,7 +4,7 @@ GIT_DESCR = $(shell git describe --always)
 # build output folder
 OUTPUTFOLDER = dist
 # docker image
-DOCKER_IMAGE = registry.gitlab.com/welance/oss/distill
+DOCKER_IMAGE = registry.github.com/noandrea/distill
 DOCKER_TAG = $(shell git describe --always)
 # build paramters
 OS = linux
@@ -31,7 +31,8 @@ build-dist: $(GOFILES)
 test: test-all
 
 test-all:
-	@go test -v $(GOPACKAGES) -coverprofile .testCoverage.txt
+	echo $(GOPACKAGES)
+	@go test $(GOPACKAGES) -coverprofile .testCoverage.txt -cover
 
 bench: bench-all
 
