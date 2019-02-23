@@ -119,31 +119,34 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 	if err != nil {
 		return
 	}
-	expired := false
+
+	urlop := &URLOp{ID: urlInfo.ID}
+
 	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
 		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		expired = true
+		err = ErrURLExpired
+		redirectURL = urlInfo.ExpiredURL
+
+		urlop.err = err
+		urlop.opcode = opcodeExpired
+		pushEvent(urlop)
+		return
 	}
 	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
 		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		expired = true
-	}
+		err = ErrURLExhausted
+		redirectURL = urlInfo.ExhaustedURL
 
-	if expired {
-		err = ErrURLExpired // collect statistics
-		pushEvent(&URLOp{
-			opcode: opcodeExpired,
-			ID:     urlInfo.ID,
-			err:    err,
-		})
+		urlop.err = err
+		urlop.opcode = opcodeExpired
+		pushEvent(urlop)
 		return
 	}
+
 	// collect statistics
-	pushEvent(&URLOp{
-		opcode: opcodeGet,
-		ID:     urlInfo.ID,
-		err:    err,
-	})
+	urlop.err = err
+	urlop.opcode = opcodeGet
+	pushEvent(urlop)
 	// return the redirectUrl
 	redirectURL = urlInfo.URL
 	return
