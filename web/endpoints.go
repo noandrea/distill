@@ -3,17 +3,6 @@ package web
 
 import (
 	"crypto/subtle"
-<<<<<<< HEAD
-	"log"
-	"net/http"
-	"time"
-
-	"github.com/jbrodriguez/mlog"
-
-	"github.com/noandrea/distill/urlstore"
-
-=======
->>>>>>> chore/github
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -106,7 +95,7 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 	}
 	// upsert the data
 	id, err := urlstore.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
-	mlog.Trace("creted %v", id)
+	mlog.Trace("created %v", id)
 	// TODO: check the actual error
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
@@ -118,7 +107,7 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
 	targetURL, err := urlstore.GetURLRedirect(shortID)
-	if err != nil {
+	if err != nil && len(targetURL) == 0 {
 		http.Error(w, "URL not found", 404)
 	}
 	// send redirect

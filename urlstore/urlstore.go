@@ -115,6 +115,8 @@ func UpdateStats(s Statistics) {
 	st.Gets += s.Gets
 	st.Deletes += s.Deletes
 	st.Upserts += s.Upserts
+	st.GetsExpired += s.GetsExpired
+	st.LastRequest = s.LastRequest
 }
 
 // ResetStats reset global statistcs

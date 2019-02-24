@@ -2,6 +2,7 @@ package urlstore
 
 import (
 	"sync"
+	"time"
 
 	"github.com/bluele/gcache"
 	"github.com/jbrodriguez/mlog"
@@ -30,30 +31,13 @@ func pushEvent(urlop *URLOp) {
 		s.Upserts++
 		s.Urls++
 	case opcodeGet:
+		s.LastRequest = time.Now()
 		s.Gets++
 	case opcodeExpired:
-		s.Deletes++
-		s.Urls--
-		Delete(urlop.ID)
+		s.LastRequest = time.Now()
+		s.GetsExpired++
 	}
 	UpdateStats(s)
-	// switch urlop.opcode {
-	// case opcodeDelete, opcodeExpired:
-	// 	key := fmt.Sprint(urlop.opcode, ":", urlop.ID)
-	// 	// if it's in cache do not queue the job
-	// 	if _, err := sc.GetIFPresent(key); err == nil {
-	// 		// if not set a nil value for some seconds so it
-	// 		sc.SetWithExpire(key, nil, time.Duration(60)*time.Second)
-	// 		return
-	// 	}
-	// 	// if not set a nil value for some seconds so it
-	// 	sc.SetWithExpire(key, nil, time.Duration(60)*time.Second)
-	// case opcodeInsert:
-	// 	for _, key := range []int{opcodeDelete, opcodeExpired} {
-	// 		sc.Remove(key)
-	// 	}
-	// }
-	//opEventsQueue <- urlop
 }
 
 // Process is an implementation of wp.Job.Process()
@@ -67,14 +51,14 @@ func processEvents(workerID int) {
 		mlog.Trace(">>> Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 		switch uo.opcode {
 		case opcodeGet:
-			globalStatistics.record(1, 0, 0, 0)
+			globalStatistics.record(1, 0, 0, 0, 0)
 		case opcodeInsert:
 			// TODO: check if existed already
-			globalStatistics.record(0, 1, 0, 1)
+			globalStatistics.record(0, 1, 0, 1, 0)
 		case opcodeDelete:
-			globalStatistics.record(0, 0, 1, -1)
+			globalStatistics.record(0, 0, 1, -1, 0)
 		case opcodeExpired:
-			globalStatistics.record(0, 0, 1, -1)
+			globalStatistics.record(0, 0, 0, 0, 1)
 		}
 		mlog.Trace("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 	}
@@ -89,12 +73,15 @@ var (
 	statsMutex sync.Mutex
 )
 
-func (s *Statistics) record(get, upsert, delete, urls int64) {
+func (s *Statistics) record(get, upsert, delete, urls, getExpired int64) {
 	statsMutex.Lock()
-	s.Gets += get
-	s.Upserts += upsert
-	s.Deletes += delete
-	s.Urls += urls
+	// this is confusing but actually correct
+	// if the input number is negative will work just the same
+	s.Gets += uint64(get)
+	s.GetsExpired += uint64(getExpired)
+	s.Upserts += uint64(upsert)
+	s.Deletes += uint64(delete)
+	s.Urls += uint64(urls)
 	statsMutex.Unlock()
 }
 
@@ -132,30 +119,30 @@ func runDbMaintenance() {
 	// caluclate if gc is necessary
 	deletes := globalStatistics.Deletes
 	gcLimit := Config.Tuning.DbGCDeletesCount
-	gcCount := 0
+	gcCount := uint64(0)
 	// retrieve the gcCount from the db
 	db.View(func(txn *badger.Txn) (err error) {
-		gcCount = int(dbGetInt64(txn, sysKeyGCCount))
+		gcCount = dbGetUint64(txn, sysKeyGCCount)
 		return
 	})
 
 	latestGC := gcCount * gcLimit
-	if latestGC > int(deletes) {
+	if latestGC > deletes {
 		// there was a reset should reset in the stats
 		gcCount, latestGC = 0, 0
 	}
 
-	if int(deletes)-latestGC > gcLimit {
-		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
+	if deletes-latestGC > gcLimit {
+		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
 
 		mlog.Info("")
 
 		db.RunValueLogGC(Config.Tuning.DbGCDiscardRation)
-		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, int(deletes)-latestGC, gcLimit)
+		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
 		// update the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {
 			gcCount++
-			dbSetInt64(txn, sysKeyGCCount, int64(gcCount))
+			dbSetUint64(txn, sysKeyGCCount, gcCount)
 			return
 		})
 	}

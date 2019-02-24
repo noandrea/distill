@@ -38,11 +38,28 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 		mlog.Error(err)
 		return
 	}
+	// check that, if set ExhaustedURL is a valid url
+	if len(url.ExhaustedURL) > 0 {
+		if _, err = net.ParseRequestURI(url.ExhaustedURL); err != nil {
+			mlog.Error(err)
+			return
+		}
+	}
+	// check that, if set ExhaustedURL is a valid url
+	if len(url.ExpiredURL) > 0 {
+		if _, err = net.ParseRequestURI(url.ExpiredURL); err != nil {
+			mlog.Error(err)
+			return
+		}
+	}
+
 	// set the binding date
 	u := &URLInfo{
-		BountAt: boundAt,
-		URL:     url.URL,
-		TTL:     url.TTL,
+		BountAt:      boundAt,
+		URL:          url.URL,
+		ExhaustedURL: url.ExhaustedURL,
+		TTL:          url.TTL,
+		ExpiredURL:   url.ExpiredURL,
 	}
 	// the local expiration always take priority
 	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)

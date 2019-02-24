@@ -489,8 +489,9 @@ func TestExpireRequestsUrl(t *testing.T) {
 	//TODO: time.Sleep(time.Duration(10) * time.Millisecond)
 	s := GetStats()
 	t.Log(s)
-	if s.Urls != 2 {
-		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 2)
+	var expected uint64 = 6
+	if s.Urls != expected {
+		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, expected)
 	}
 }
 
@@ -566,7 +567,7 @@ func TestExpireTTLUrl(t *testing.T) {
 	// get the stats
 	s := GetStats()
 	t.Log(s)
-	if s.Urls != 2 {
+	if s.Urls != 4 {
 		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 4)
 	}
 }

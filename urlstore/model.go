@@ -55,26 +55,29 @@ type URLReq struct {
 	ID           string    `json:"id"`
 	URL          string    `json:"url"`
 	MaxRequests  uint64    `json:"max_requests,omitempty"`
-	ExhaustedURL string    `json:"exhausted_url"`
+	ExhaustedURL string    `json:"url_exhausted"`
 	TTL          uint64    `json:"ttl,omitempty"`
 	ExpireOn     time.Time `json:"expire_on,omitempty"`
-	ExpiredURL   string    `json:"expired_url"`
+	ExpiredURL   string    `json:"url_expired"`
 }
 
 // Statistics contains the global statistics
 type Statistics struct {
-	Urls    uint64 `json:"urls"`
-	Gets    uint64 `json:"gets"`
-	Upserts uint64 `json:"upserts"`
-	Deletes uint64 `json:"deletes"`
+	Urls        uint64    `json:"urls"`
+	Gets        uint64    `json:"gets"`
+	GetsExpired uint64    `json:"gets_expired"`
+	Upserts     uint64    `json:"upserts"`
+	Deletes     uint64    `json:"deletes"`
+	LastRequest time.Time `json:"last_request"`
 }
 
 func (s *Statistics) String() string {
-	return fmt.Sprintf("URLs: %d, GETs: %d, Inserts: %d, Deletes: %d",
+	return fmt.Sprintf("URLs: %d, GETs: %d, Inserts: %d, Deletes: %d, GetsExpired: %d",
 		s.Urls,
 		s.Gets,
 		s.Upserts,
 		s.Deletes,
+		s.GetsExpired,
 	)
 }
 
