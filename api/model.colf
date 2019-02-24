@@ -1,12 +1,15 @@
-// Package demo offers a demonstration.
+// Package urlstore contains the engine of distill
 package urlstore
 
 // URLInfo contains the data associated to an id
 type URLInfo struct {
   ID            text
 	URL           text
-	Counter       int64
+	Counter       uint64
 	BountAt       timestamp
-  MaxRequests   int64
+  MaxRequests   uint64
+  ExhaustedURL  text
+  TTL           uint64
   ExpireOn      timestamp
+  ExpiredURL    text
 }

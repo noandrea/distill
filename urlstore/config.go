@@ -24,8 +24,8 @@ type ServerConfig struct {
 type ShortIDConfig struct {
 	Alphabet    string    `yaml:"alphabet"`
 	Length      int       `yaml:"length"`
-	MaxRequests int64     `yaml:"maxRequests"`
-	TTL         int64     `yaml:"ttl"`
+	MaxRequests uint64    `yaml:"maxRequests"`
+	TTL         uint64    `yaml:"ttl"`
 	ExpireOn    time.Time `yaml:"expireOn"`
 }
 
@@ -33,8 +33,8 @@ type ShortIDConfig struct {
 type TuningConfig struct {
 	StatsEventsWorkerNum   int     `yaml:"statsEventsWorkerNum"`
 	StatsCaheSize          int     `yaml:"statsCacheSize"`
-	DbPurgeWritesCount     int     `yaml:"dbPurgeWritesCount"`
-	DbGCDeletesCount       int     `yaml:"dbGCDeletesCount"`
+	DbPurgeWritesCount     uint64  `yaml:"dbPurgeWritesCount"`
+	DbGCDeletesCount       uint64  `yaml:"dbGCDeletesCount"`
 	DbGCDiscardRation      float64 `yaml:"dbGCDiscardRation"`
 	URLCaheSize            int     `yaml:"URLCaheSize"`
 	BckCSVIterPrefetchSize int     `yaml:"exportIteratorPrefetchSize"`
@@ -68,8 +68,8 @@ func (c *ConfigSchema) Defaults() {
 	// For tuning
 	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsWorkerNum, 1)
 	common.DefaultIfEmptyInt(&c.Tuning.StatsCaheSize, 1024)
-	common.DefaultIfEmptyInt(&c.Tuning.DbPurgeWritesCount, 2000)
-	common.DefaultIfEmptyInt(&c.Tuning.DbGCDeletesCount, 500)
+	common.DefaultIfEmptyUint64(&c.Tuning.DbPurgeWritesCount, 2000)
+	common.DefaultIfEmptyUint64(&c.Tuning.DbGCDeletesCount, 500)
 	if c.Tuning.DbGCDiscardRation <= 0 || c.Tuning.DbGCDiscardRation > 1 {
 		c.Tuning.DbGCDiscardRation = 0.5
 	}

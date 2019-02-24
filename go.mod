@@ -16,6 +16,8 @@ require (
 	github.com/magiconair/properties v1.8.0 // indirect
 	github.com/matoous/go-nanoid v0.0.0-20180109130436-958d370425a1
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
+	github.com/pascaldekloe/colfer v1.7.2 // indirect
+	github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 // indirect
 	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/spf13/afero v1.2.1 // indirect

@@ -31,6 +31,10 @@ github.com/matoous/go-nanoid v0.0.0-20180109130436-958d370425a1 h1:Ar0OvPWGq9L0C
 github.com/matoous/go-nanoid v0.0.0-20180109130436-958d370425a1/go.mod h1:soqXi4beH2aAljcVvgIDqekDtnM2UZkGl47fniwq3J4=
 github.com/mitchellh/mapstructure v1.1.2 h1:fmNYVwqnSfB9mZU6OS2O6GsXM+wcskZDuKQzvN1EDeE=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
+github.com/pascaldekloe/colfer v1.7.2 h1:K3aL8f7EwPZFSVqw0O1G5SF0QJr1UKmxXy6w1qi5BP0=
+github.com/pascaldekloe/colfer v1.7.2/go.mod h1:PhNrW/fveA4p0SoVhCSE3ZxXvWvGRHll2uIaYD9VnUo=
+github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 h1:/I3lTljEEDNYLho3/FUB7iD/oc2cEFgVmbHzV+O0PtU=
+github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1/go.mod h1:eD5JxqMiuNYyFNmyY9rkJ/slN8y59oEu4Ei7F8OoKWQ=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=

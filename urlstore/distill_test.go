@@ -81,7 +81,7 @@ func buildConifgTestShortIDParams(alphabet string, length int) {
 	Config.Validate()
 }
 
-func buildConifgTestExpireParams(ttl, maxr int64, expire time.Time) {
+func buildConifgTestExpireParams(ttl, maxr uint64, expire time.Time) {
 	setupLog()
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
@@ -489,8 +489,9 @@ func TestExpireRequestsUrl(t *testing.T) {
 	//TODO: time.Sleep(time.Duration(10) * time.Millisecond)
 	s := GetStats()
 	t.Log(s)
-	if s.Urls != 2 {
-		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 2)
+	var expected uint64 = 6
+	if s.Urls != expected {
+		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, expected)
 	}
 }
 
@@ -566,8 +567,8 @@ func TestExpireTTLUrl(t *testing.T) {
 	// get the stats
 	s := GetStats()
 	t.Log(s)
-	if s.Urls != 2 {
-		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 2)
+	if s.Urls != 4 {
+		t.Errorf("ExpireUrl() count = %v, want %v", s.Urls, 4)
 	}
 }
 

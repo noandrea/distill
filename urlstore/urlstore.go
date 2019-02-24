@@ -83,10 +83,10 @@ func whenRemoved(key, value interface{}) {
 func SaveStats() (err error) {
 	err = db.Update(func(txn *badger.Txn) (err error) {
 		// find all the urls
-		dbSetInt64(txn, statsKeyGlobalURLCount, st.Urls)
-		dbSetInt64(txn, statsKeyGlobalGetCount, st.Gets)
-		dbSetInt64(txn, statsKeyGlobalDelCount, st.Deletes)
-		dbSetInt64(txn, statsKeyGlobalUpdCount, st.Upserts)
+		dbSetUint64(txn, statsKeyGlobalURLCount, st.Urls)
+		dbSetUint64(txn, statsKeyGlobalGetCount, st.Gets)
+		dbSetUint64(txn, statsKeyGlobalDelCount, st.Deletes)
+		dbSetUint64(txn, statsKeyGlobalUpdCount, st.Upserts)
 		// update global statistics
 		return
 	})
@@ -98,10 +98,10 @@ func LoadStats() (err error) {
 	// initialize object
 	st = &Statistics{}
 	err = db.View(func(txn *badger.Txn) (err error) {
-		st.Urls = dbGetInt64(txn, statsKeyGlobalURLCount)
-		st.Gets = dbGetInt64(txn, statsKeyGlobalGetCount)
-		st.Deletes = dbGetInt64(txn, statsKeyGlobalDelCount)
-		st.Upserts = dbGetInt64(txn, statsKeyGlobalUpdCount)
+		st.Urls = dbGetUint64(txn, statsKeyGlobalURLCount)
+		st.Gets = dbGetUint64(txn, statsKeyGlobalGetCount)
+		st.Deletes = dbGetUint64(txn, statsKeyGlobalDelCount)
+		st.Upserts = dbGetUint64(txn, statsKeyGlobalUpdCount)
 		return
 	})
 	return
@@ -115,6 +115,8 @@ func UpdateStats(s Statistics) {
 	st.Gets += s.Gets
 	st.Deletes += s.Deletes
 	st.Upserts += s.Upserts
+	st.GetsExpired += s.GetsExpired
+	st.LastRequest = s.LastRequest
 }
 
 // ResetStats reset global statistcs
@@ -375,7 +377,7 @@ func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
 	return
 }
 
-func dbSetInt64(txn *badger.Txn, k []byte, val int64) {
+func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
 	err := txn.Set(k, itoa(val))
 	mlog.Trace("dbSetInt64 write %s", k)
 	if err != nil {
@@ -403,7 +405,7 @@ func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 	return
 }
 
-func dbGetInt64(txn *badger.Txn, k []byte) (i int64) {
+func dbGetUint64(txn *badger.Txn, k []byte) (i uint64) {
 	item, err := txn.Get(k)
 	if err != nil {
 		return

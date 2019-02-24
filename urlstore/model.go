@@ -52,27 +52,32 @@ type ShortID struct {
 
 // URLReq request from a client to register an url
 type URLReq struct {
-	ID          string    `json:"id"`
-	URL         string    `json:"url"`
-	MaxRequests int64     `json:"max_requests,omitempty"`
-	TTL         int64     `json:"ttl,omitempty"`
-	ExpireOn    time.Time `json:"expire_on,omitempty"`
+	ID           string    `json:"id"`
+	URL          string    `json:"url"`
+	MaxRequests  uint64    `json:"max_requests,omitempty"`
+	ExhaustedURL string    `json:"url_exhausted"`
+	TTL          uint64    `json:"ttl,omitempty"`
+	ExpireOn     time.Time `json:"expire_on,omitempty"`
+	ExpiredURL   string    `json:"url_expired"`
 }
 
 // Statistics contains the global statistics
 type Statistics struct {
-	Urls    int64 `json:"urls"`
-	Gets    int64 `json:"gets"`
-	Upserts int64 `json:"upserts"`
-	Deletes int64 `json:"deletes"`
+	Urls        uint64    `json:"urls"`
+	Gets        uint64    `json:"gets"`
+	GetsExpired uint64    `json:"gets_expired"`
+	Upserts     uint64    `json:"upserts"`
+	Deletes     uint64    `json:"deletes"`
+	LastRequest time.Time `json:"last_request"`
 }
 
 func (s *Statistics) String() string {
-	return fmt.Sprintf("URLs: %d, GETs: %d, Inserts: %d, Deletes: %d",
+	return fmt.Sprintf("URLs: %d, GETs: %d, Inserts: %d, Deletes: %d, GetsExpired: %d",
 		s.Urls,
 		s.Gets,
 		s.Upserts,
 		s.Deletes,
+		s.GetsExpired,
 	)
 }
 
@@ -107,14 +112,16 @@ func (u *ShortID) Bind(r *http.Request) error {
 
 //MarshalRecord marshal a urlinfo to a string array (for csv)
 func (u *URLInfo) MarshalRecord() []string {
-	pieces := make([]string, 7)
+	pieces := make([]string, 9)
 	pieces[0] = u.ID
 	pieces[1] = u.URL
 	pieces[2] = fTime(u.BountAt)
-	pieces[3] = fInt64(u.Counter)
-	pieces[4] = fInt64(u.MaxRequests)
-	pieces[5] = fInt64(u.TTL)
-	pieces[6] = fTime(u.ExpireOn)
+	pieces[3] = fUint64(u.Counter)
+	pieces[4] = fUint64(u.MaxRequests)
+	pieces[5] = u.ExhaustedURL
+	pieces[6] = fUint64(u.TTL)
+	pieces[7] = fTime(u.ExpireOn)
+	pieces[8] = u.ExpiredURL
 	return pieces
 }
 
@@ -129,13 +136,13 @@ func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
 	if u.BountAt, err = pTime(pieces, 2, pl); err != nil {
 		return
 	}
-	if u.Counter, err = pInt64(pieces, 3, pl); err != nil {
+	if u.Counter, err = pUint64(pieces, 3, pl); err != nil {
 		return
 	}
-	if u.MaxRequests, err = pInt64(pieces, 4, pl); err != nil {
+	if u.MaxRequests, err = pUint64(pieces, 4, pl); err != nil {
 		return
 	}
-	if u.TTL, err = pInt64(pieces, 5, pl); err != nil {
+	if u.TTL, err = pUint64(pieces, 5, pl); err != nil {
 		return
 	}
 	if u.BountAt, err = pTime(pieces, 6, pl); err != nil {
@@ -151,10 +158,10 @@ func (u *URLReq) UnmarshalRecord(pieces []string) (err error) {
 	if p > 1 {
 		u.ID = pieces[1]
 	}
-	if u.MaxRequests, err = pInt64(pieces, 2, p); err != nil {
+	if u.MaxRequests, err = pUint64(pieces, 2, p); err != nil {
 		return
 	}
-	if u.TTL, err = pInt64(pieces, 3, p); err != nil {
+	if u.TTL, err = pUint64(pieces, 3, p); err != nil {
 		return
 	}
 	if u.ExpireOn, err = pTime(pieces, 4, p); err != nil {
@@ -171,12 +178,21 @@ func (u *URLReq) UnmarshalRecord(pieces []string) (err error) {
 //  |____||____||________||________||_____|  |________||____| |___|\______.'
 //
 
-// fInt64 for csv printing
-func fInt64(v int64) (str string) {
+// // fInt64 for csv printing
+// func fInt64(v int64) (str string) {
+// 	if v == 0 {
+// 		return
+// 	}
+// 	str = strconv.FormatInt(v, 10)
+// 	return
+// }
+
+// fUint64 for csv printing
+func fUint64(v uint64) (str string) {
 	if v == 0 {
 		return
 	}
-	str = strconv.FormatInt(v, 10)
+	str = strconv.FormatUint(v, 10)
 	return
 }
 
@@ -197,6 +213,14 @@ func pInt64(src []string, idx, srcLen int) (v int64, err error) {
 	return
 }
 
+// pUint64 parse an int64 from a string
+func pUint64(src []string, idx, srcLen int) (v uint64, err error) {
+	if idx < srcLen && len(src[idx]) > 0 {
+		v, err = strconv.ParseUint(src[idx], 10, 64)
+	}
+	return
+}
+
 // pTime parse a time.Time from a string
 func pTime(src []string, idx, srcLen int) (v time.Time, err error) {
 	if idx < srcLen && len(src[idx]) > 0 {
@@ -205,14 +229,14 @@ func pTime(src []string, idx, srcLen int) (v time.Time, err error) {
 	return
 }
 
-func itoa(i int64) (b []byte) {
+func itoa(i uint64) (b []byte) {
 	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(i))
+	binary.BigEndian.PutUint64(b, i)
 	return
 }
 
-func atoi(b []byte) int64 {
-	return int64(binary.LittleEndian.Uint64(b))
+func atoi(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
 }
 
 func opcodeToString(opcode int) (label string) {
@@ -239,6 +263,9 @@ func opcodeToString(opcode int) (label string) {
 
 // ErrURLExpired when url is expired
 var ErrURLExpired = fmt.Errorf("url expired")
+
+// ErrURLExhausted when url is expired
+var ErrURLExhausted = fmt.Errorf("url exhausted")
 
 // ErrInvalidBackupRecord when a csv record from backup is different from expected
 var ErrInvalidBackupRecord = fmt.Errorf("Invalid backup record")

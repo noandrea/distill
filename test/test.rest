@@ -7,9 +7,11 @@ Content-Type: application/json
 
 {
     "id": "testtest",
-    "url": "https://hackernews.com",
+    "url": "https://gist.githubusercontent.com/noandrea/b636b1e8361e5f8f1250240ce0f87fe5/raw/3daa6dd7f5923870e13721ca8412bdae05c25f7e/found",
     "max_requests": 10,
-    "ttl": 3600 
+    "url_exhausted": "https://www.thesaurus.com/browse/exhausted",
+    "ttl": 3600,
+    "url_expired": "https://www.thesaurus.com/browse/expired"
 }
 
 ###
