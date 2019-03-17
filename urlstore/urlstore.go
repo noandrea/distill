@@ -40,8 +40,11 @@ func NewSession() {
 	opts := badger.DefaultOptions
 	opts.SyncWrites = true
 	opts.Dir = Config.Server.DbPath
+	err := os.MkdirAll(Config.Server.DbPath, os.ModePerm)
+	if err != nil {
+		mlog.Fatal(err)
+	}
 	opts.ValueDir = Config.Server.DbPath
-	var err error
 	db, err = badger.Open(opts)
 	if err != nil {
 		mlog.Fatal(err)
