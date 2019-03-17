@@ -1,4 +1,4 @@
-# Distill 
+# Distill
 
 Another url shortener
 
@@ -50,6 +50,76 @@ For the _TTL_ and the _expiration date_ the actual expiration is selected as
 For redirects, the expiration url redirect takes precedence over the exhaustion url redirect.
 
 If no redirects are set for exhausted / expired url then a `404` is returned.
+
+## Api Doc
+
+### Register a redirect
+
+Miniaml request is:
+
+```
+POST http://localhost:1804/api/short
+X-API-KEY: 123123_changeme_changeme
+Content-Type: application/json
+
+{
+    "url": "https://example.com/target_url"
+}
+```
+
+Repsonse:
+
+```
+HTTP/1.1 200 OK
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Methods: *
+Access-Control-Allow-Origin: *
+Content-Type: application/json
+Date: Sun, 17 Mar 2019 21:18:16 GMT
+Content-Length: 16
+Connection: close
+
+{
+  "id": "wBNaqx"
+}
+```
+
+A request can contain additional fields:
+
+```
+POST http://localhost:1804/api/short
+X-API-KEY: 123123_changeme_changeme
+Content-Type: application/json
+
+{
+    "id": "myid"
+    "url": "https://example.com/target_url",
+    "max_requests": 20,
+    "url_exhausted" : "https://example.com/max_requests_reached_url",
+    "ttl": 0,
+    "expire_on": "2039-03-17T22:05:28+01:00",
+    "url_expired" : "https://example.com/ttl_or_epiration_reached_url"
+}
+```
+
+Repsonse:
+
+```
+HTTP/1.1 200 OK
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Methods: *
+Access-Control-Allow-Origin: *
+Content-Type: application/json
+Date: Sun, 17 Mar 2019 21:18:16 GMT
+Content-Length: 16
+Connection: close
+
+{
+  "id": "myid"
+}
+```
 
 ## Backup / Restore
 
