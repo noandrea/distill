@@ -16,17 +16,20 @@ type ServerConfig struct {
 	Host            string `yaml:"host"`
 	Port            int    `yaml:"port"`
 	DbPath          string `yaml:"dbPath"`
-	RootRedirect    string `yaml:"rootRedirect"`
-	ExpiredRedirect string `yaml:"expiredRedirect"`
 }
 
 //ShortIDConfig configureaiont for the short id
 type ShortIDConfig struct {
-	Alphabet    string    `yaml:"alphabet"`
-	Length      int       `yaml:"length"`
-	MaxRequests uint64    `yaml:"maxRequests"`
-	TTL         uint64    `yaml:"ttl"`
-	ExpireOn    time.Time `yaml:"expireOn"`
+	Alphabet             string    `yaml:"alphabet" mapstructure:"alphabet"`
+	Length               int       `yaml:"length" mapstructure:"length"`
+	MaxRequests          uint64    `yaml:"max_requests" mapstructure:"max_requests"`
+	TTL                  uint64    `yaml:"ttl" mapstructure:"ttl"`
+	ExpireOn             time.Time `yaml:"expire_on" mapstructure:"expire_on"`
+	RootRedirectURL      string    `yaml:"root_redirect_url" mapstructure:"root_redirect_url"`
+	ExpiredRedirectURL   string    `yaml:"expired_redirect_url" mapstructure:"expired_redirect_url"`
+	ExhaustedRedirectURL string    `yaml:"exhausted_redirect_url" mapstructure:"exhausted_redirect_url"`
+}
+
 }
 
 // TuningConfig fine tuning configuration
@@ -58,10 +61,10 @@ func (c *ConfigSchema) Defaults() {
 	common.DefaultIfEmptyStr(&c.Server.Host, "0.0.0.0")
 	common.DefaultIfEmptyInt(&c.Server.Port, 1804)
 	common.DefaultIfEmptyStr(&c.Server.DbPath, "distill.db")
-	common.DefaultIfEmptyStr(&c.Server.RootRedirect, "https://github.com/noandrea/distill/wikis/welcome")
-	common.DefaultIfEmptyStr(&c.Server.ExpiredRedirect, "https://github.com/noandrea/distill/wikis/Expired-URL")
 
 	// for short id
+	common.DefaultIfEmptyStr(&c.ShortID.RootRedirectURL, "https://github.com/noandrea/distill/wikis/welcome")
+	common.DefaultIfEmptyStr(&c.ShortID.ExpiredRedirectURL, "https://github.com/noandrea/distill/wikis/Expired-URL")
 	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
 	common.DefaultIfEmptyInt(&c.ShortID.Length, 6)
 

@@ -128,7 +128,7 @@ func (u *URLInfo) MarshalRecord() []string {
 //UnmarshalRecord unmarshal a string array into a urlinfo
 func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
 	pl := len(pieces)
-	if pl != 7 {
+	if pl != 9 {
 		return fmt.Errorf("Invalid backup record! record corrupted")
 	}
 	u.ID = pieces[0]
@@ -142,12 +142,14 @@ func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
 	if u.MaxRequests, err = pUint64(pieces, 4, pl); err != nil {
 		return
 	}
-	if u.TTL, err = pUint64(pieces, 5, pl); err != nil {
+	u.ExhaustedURL = pieces[5]
+	if u.TTL, err = pUint64(pieces, 6, pl); err != nil {
 		return
 	}
-	if u.BountAt, err = pTime(pieces, 6, pl); err != nil {
+	if u.BountAt, err = pTime(pieces, 7, pl); err != nil {
 		return
 	}
+	u.ExpiredURL = pieces[8]
 	return
 }
 
@@ -177,15 +179,6 @@ func (u *URLReq) UnmarshalRecord(pieces []string) (err error) {
 //   _| |  | |_  _| |__/ | _| |__/ | _| |_    _| |__/ | _| |  \ \_| \____) |
 //  |____||____||________||________||_____|  |________||____| |___|\______.'
 //
-
-// // fInt64 for csv printing
-// func fInt64(v int64) (str string) {
-// 	if v == 0 {
-// 		return
-// 	}
-// 	str = strconv.FormatInt(v, 10)
-// 	return
-// }
 
 // fUint64 for csv printing
 func fUint64(v uint64) (str string) {

@@ -142,6 +142,7 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
 		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
 		err = ErrURLExpired
+		common.DefaultIfEmptyStr(&urlInfo.ExpiredURL, Config.ShortID.ExpiredRedirectURL)
 		redirectURL = urlInfo.ExpiredURL
 
 		urlop.err = err
@@ -152,6 +153,7 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
 		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
 		err = ErrURLExhausted
+		common.DefaultIfEmptyStr(&urlInfo.ExhaustedURL, Config.ShortID.ExhaustedRedirectURL)
 		redirectURL = urlInfo.ExhaustedURL
 
 		urlop.err = err
