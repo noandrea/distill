@@ -2,7 +2,7 @@
 
 Another url shortener
 
-[![pipeline status](https://github.com/noandrea/distill/badges/develop/pipeline.svg)](https://github.com/noandrea/distill/commits/develop) [![coverage report](https://github.com/noandrea/distill/badges/develop/coverage.svg)](https://github.com/noandrea/distill/commits/develop) [![GoDoc](https://godoc.org/github.com/noandrea/distill?status.svg)](https://godoc.org/github.com/noandrea/distill) [![Go Report Card](https://goreportcard.com/badge/github.com/noandrea/distill)](https://goreportcard.com/report/github.com/noandrea/distill)
+[![Build Status](https://travis-ci.com/noandrea/distill.svg?branch=master)](https://travis-ci.com/noandrea/distill) [![codecov](https://codecov.io/gh/noandrea/distill/branch/master/graph/badge.svg)](https://codecov.io/gh/noandrea/distill) [![GoDoc](https://godoc.org/github.com/noandrea/distill?status.svg)](https://godoc.org/github.com/noandrea/distill) [![Go Report Card](https://goreportcard.com/badge/github.com/noandrea/distill)](https://goreportcard.com/report/github.com/noandrea/distill)
 
 ## Motivations
 
@@ -168,3 +168,12 @@ test
   `colf -b internal Go api/model.colf` from the project root
 
 - to enable coverage badge use `^coverage:\s(\d+(?:\.\d+)?%)` as regexp in gilab configuration
+
+## Hints
+
+To generate an API Token randomly use the `make gen-secret` (linux/mac only):
+
+```
+make gen-secret 
+WiYS8DauSwVIMeNGIp63ScmY-pgA1ECA7ai7Oce7
+```

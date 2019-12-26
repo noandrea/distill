@@ -37,9 +37,13 @@ var (
 // NewSession opens the underling storage
 func NewSession() {
 	// open the badger database
-	opts := badger.DefaultOptions
+	opts := badger.DefaultOptions(Config.Server.DbPath)
 	opts.SyncWrites = true
+<<<<<<< HEAD
 	opts.Dir = Config.Server.DbPath
+=======
+	// opts.Dir = Config.Server.DbPath TODO: this should not be necessary anymore
+>>>>>>> master
 	err := os.MkdirAll(Config.Server.DbPath, os.ModePerm)
 	if err != nil {
 		mlog.Fatal(err)
@@ -49,13 +53,13 @@ func NewSession() {
 	if err != nil {
 		mlog.Fatal(err)
 	}
-	// initialzie internal cache
+	// initialize internal cache
 	uc = gcache.New(Config.Tuning.URLCaheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
 		Build()
-	// inintialize statistics
+	// initialize statistics
 	err = LoadStats()
 	if err != nil {
 		mlog.Fatal(err)
@@ -264,13 +268,11 @@ func Backup(outFile string) (err error) {
 			p := []byte{keyURLPrefix}
 			for it.Seek(p); it.ValidForPrefix(p); it.Next() {
 				// retrieve values
-				v, err := it.Item().Value()
-				if err != nil {
-					break
-				}
-				u := &URLInfo{}
-				u.UnmarshalBinary(v)
-				err = csvW.Write(u.MarshalRecord())
+				err := it.Item().Value(func(v []byte) error {
+					u := &URLInfo{}
+					u.UnmarshalBinary(v)
+					return csvW.Write(u.MarshalRecord())
+				})
 				if err != nil {
 					break
 				}
@@ -293,7 +295,7 @@ func Restore(inFile string) (count int, err error) {
 		if err != nil {
 			return 0, err
 		}
-		db.Load(fp)
+		db.Load(fp, 16)
 		fp.Close()
 	case backupExtCsv:
 		fp, err := os.Open(inFile)
@@ -354,12 +356,10 @@ func (i *URLIterator) HasNext() bool {
 
 // NextURL get the next URL from the iterator
 func (i *URLIterator) NextURL() (u *URLInfo, err error) {
-	v, err := i.Iterator.Item().Value()
-	if err != nil {
-		return
-	}
 	u = &URLInfo{}
-	err = u.UnmarshalBinary(v)
+	err = i.Iterator.Item().Value(func(v []byte) error {
+		return u.UnmarshalBinary(v)
+	})
 	return
 }
 
@@ -403,7 +403,10 @@ func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 	if err != nil {
 		return
 	}
-	val, err = item.Value()
+	err = item.Value(func(v []byte) error {
+		val = v
+		return nil
+	})
 	mlog.Trace("dbGet read %s v:%d ", k, item.Version())
 	return
 }
@@ -413,11 +416,12 @@ func dbGetUint64(txn *badger.Txn, k []byte) (i uint64) {
 	if err != nil {
 		return
 	}
-	val, err := item.Value()
+	val := numberZero
+	err = item.Value(func(v []byte) error {
+		val = v
+		return nil
+	})
 	mlog.Trace("dbGetInt64 read %s v:%d ", k, item.Version())
-	if err != nil {
-		val = numberZero
-	}
 	i = atoi(val)
 	return
 }

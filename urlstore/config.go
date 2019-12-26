@@ -12,10 +12,10 @@ import (
 
 // ServerConfig configuration for the server
 type ServerConfig struct {
-	APIKey          string `yaml:"apiKey"`
-	Host            string `yaml:"host"`
-	Port            int    `yaml:"port"`
-	DbPath          string `yaml:"dbPath"`
+	APIKey string `yaml:"apiKey"`
+	Host   string `yaml:"host"`
+	Port   int    `yaml:"port"`
+	DbPath string `yaml:"dbPath"`
 }
 
 //ShortIDConfig configureaiont for the short id
@@ -28,8 +28,6 @@ type ShortIDConfig struct {
 	RootRedirectURL      string    `yaml:"root_redirect_url" mapstructure:"root_redirect_url"`
 	ExpiredRedirectURL   string    `yaml:"expired_redirect_url" mapstructure:"expired_redirect_url"`
 	ExhaustedRedirectURL string    `yaml:"exhausted_redirect_url" mapstructure:"exhausted_redirect_url"`
-}
-
 }
 
 // TuningConfig fine tuning configuration
