@@ -1,0 +1,40 @@
+branches:
+  only:
+  - feature/ci
+  - master
+  - develop
+
+language: go
+go:
+  - "1.13"
+  - tip
+
+env:
+  global:
+    - DISTILL_SERVER_LISTEN=0.0.0.0
+    - DISTILL_SERVER_PORT=1804
+
+# cache:
+#  timeout: 604800 # 7 days
+#  directories:
+#    - $HOME/.cache/pip
+
+# before_cache:
+#  - rm -f $HOME/.cache/pip/log/debug.log
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+jobs:
+  include:
+    - stage: Tests
+      name: Run tests
+      if: type != "cron"
+      script:
+        - make lint
+        - make test
+    - stage: Test with latest node and compiler
+      if: type = "cron"
+      script:
+        - make lint
+        - make test

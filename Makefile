@@ -4,9 +4,10 @@ GIT_DESCR = $(shell git describe --always)
 # build output folder
 OUTPUTFOLDER = dist
 # docker image
-DOCKER_IMAGE = noandrea/distill
+DOCKER_REGISTRY = noandrea
+DOCKER_IMAGE = distill
 DOCKER_TAG = $(shell git describe --always)
-# build paramters
+# build parameters
 OS = linux
 ARCH = amd64
 
@@ -31,8 +32,9 @@ build-dist: $(GOFILES)
 test: test-all
 
 test-all:
-	echo $(GOPACKAGES)
-	@go test $(GOPACKAGES) -coverprofile .testCoverage.txt -cover
+	@echo running tests 
+	go test $(GOPACKAGES) -race -coverprofile=coverage.txt -covermode=atomic
+	@echo tests completed
 
 bench: bench-all
 
@@ -60,8 +62,8 @@ docker-build: build-dist
 
 docker-push: docker-build
 	@echo push image
-	docker tag $(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_IMAGE):latest
-	docker push $(DOCKER_IMAGE)
+	docker tag $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)
 	@echo done
 
 docker-run: 
@@ -69,3 +71,6 @@ docker-run:
 
 debug-start:
 	@go run main.go -c examples/settings.yaml --debug start
+
+gen-secret:
+	@< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c40

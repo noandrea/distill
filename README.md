@@ -168,3 +168,12 @@ test
   `colf -b internal Go api/model.colf` from the project root
 
 - to enable coverage badge use `^coverage:\s(\d+(?:\.\d+)?%)` as regexp in gilab configuration
+
+## Hints
+
+To generate an API Token randomly use the `make gen-secret` (linux/mac only):
+
+```
+make gen-secret 
+WiYS8DauSwVIMeNGIp63ScmY-pgA1ECA7ai7Oce7
+```
