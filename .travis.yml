@@ -14,6 +14,12 @@ env:
     - DISTILL_SERVER_LISTEN=0.0.0.0
     - DISTILL_SERVER_PORT=1804
 
+install:
+  - go get -u golang.org/x/lint/golint 
+
+script:
+  - make lint
+  - make test
 # cache:
 #  timeout: 604800 # 7 days
 #  directories:
