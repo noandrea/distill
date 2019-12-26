@@ -3,16 +3,17 @@ server:
   host: "0.0.0.0"
   port: 1804
   apiKey: 123123_changeme_changeme
-  rootRedirect: https://github.com/noandrea/distill/wikis/welcome
-  expiredRedirect: https://github.com/noandrea/distill/wikis/Expired-URL
-  dbPath: /data/db
-  enableStats: true
+  dbPath: data/db
 
 # short id configuration
 shortId:
   alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   length: 6
   ttl: 0          # default value, 0 means no expiration
-  maxRequests: 0  # default value, 0 means no limits
+  max_requests: 0  # default value, 0 means no limits
+  # expire_on: "2019-03-17T22:03:28+01:00"  # default expiration date
+  root_redirect_url: https://github.com/noandrea/distill/wikis/welcome
+  expired_redirect_url: https://gist.githubusercontent.com/noandrea/6de5be5aafcecb4bc2b9ef9cbb81fea6/raw/17d8ddfff8bac543551049de8f2e8f74683a52e2/expired
+  exhausted_redirect_url: https://gist.githubusercontent.com/noandrea/4ea18145041ac7fd3d65fa47d63fefd1/raw/5e4b7eaaf72c909d57500b9ef9ce6356cdb6dec2/exhausted
 
 

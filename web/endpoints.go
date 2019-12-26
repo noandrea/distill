@@ -3,17 +3,14 @@ package web
 
 import (
 	"crypto/subtle"
-	"log"
-	"net/http"
-	"time"
-
-	"github.com/jbrodriguez/mlog"
-
-	"github.com/noandrea/distill/urlstore"
-
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"github.com/jbrodriguez/mlog"
+	"github.com/noandrea/distill/urlstore"
+	"log"
+	"net/http"
+	"time"
 )
 
 // RegisterEndpoints register application endpoints
@@ -39,7 +36,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 	router.Get("/health-check", healthCheckHandler)
 	// redirect root to the configured url
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, urlstore.Config.Server.RootRedirect, 302)
+		http.Redirect(w, r, urlstore.Config.ShortID.RootRedirectURL, 302)
 	})
 	// shortener redirect
 	router.Get("/{ID}", handleGetURL)
@@ -47,17 +44,8 @@ func RegisterEndpoints() (router *chi.Mux) {
 	router.Route("/api", func(r chi.Router) {
 		r.Use(apiContext)
 		// handle global statistics
-		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
-			render.JSON(w, r, *urlstore.GetStats())
-		})
-		r.Delete("/stats", func(w http.ResponseWriter, r *http.Request) {
-			err := urlstore.ResetStats()
-			if err != nil {
-				render.Render(w, r, ErrInternalError(err, err.Error()))
-				return
-			}
-			render.JSON(w, r, urlstore.GetStats())
-		})
+		r.Get("/stats", handleGetStats)
+		r.Delete("/stats", handleResetStats)
 		// handle url statistics
 		r.Get("/stats/{ID}", handleStatsURL)
 		// handle url setup
@@ -68,7 +56,6 @@ func RegisterEndpoints() (router *chi.Mux) {
 		r.Delete("/short/{ID}", handleDeleteURL)
 		// backup
 	})
-
 	return router
 }
 
@@ -98,7 +85,7 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 	}
 	// upsert the data
 	id, err := urlstore.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
-	mlog.Trace("creted %v", id)
+	mlog.Trace("created %v", id)
 	// TODO: check the actual error
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
@@ -110,7 +97,7 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
 	targetURL, err := urlstore.GetURLRedirect(shortID)
-	if err != nil {
+	if err != nil && len(targetURL) == 0 {
 		http.Error(w, "URL not found", 404)
 	}
 	// send redirect
@@ -130,6 +117,19 @@ func handleStatsURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Error(w, "URL not found", 404)
+}
+
+func handleGetStats(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, *urlstore.GetStats())
+}
+
+func handleResetStats(w http.ResponseWriter, r *http.Request) {
+	err := urlstore.ResetStats()
+	if err != nil {
+		render.Render(w, r, ErrInternalError(err, err.Error()))
+		return
+	}
+	render.JSON(w, r, urlstore.GetStats())
 }
 
 func handleDeleteURL(w http.ResponseWriter, r *http.Request) {

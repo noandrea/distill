@@ -33,6 +33,13 @@ func DefaultIfEmptyInt(v *int, defaultV int) {
 	}
 }
 
+// DefaultIfEmptyUint64 set the value of an int to a default if it is nulled (0)
+func DefaultIfEmptyUint64(v *uint64, defaultV uint64) {
+	if *v <= 0 {
+		*v = defaultV
+	}
+}
+
 // RandomString generate a random string of required length using alphabet
 func RandomString(alphabet string, length int) (s string, err error) {
 	if IsEmptyStr(alphabet) {

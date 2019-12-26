@@ -38,11 +38,28 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 		mlog.Error(err)
 		return
 	}
+	// check that, if set ExhaustedURL is a valid url
+	if len(url.ExhaustedURL) > 0 {
+		if _, err = net.ParseRequestURI(url.ExhaustedURL); err != nil {
+			mlog.Error(err)
+			return
+		}
+	}
+	// check that, if set ExhaustedURL is a valid url
+	if len(url.ExpiredURL) > 0 {
+		if _, err = net.ParseRequestURI(url.ExpiredURL); err != nil {
+			mlog.Error(err)
+			return
+		}
+	}
+
 	// set the binding date
 	u := &URLInfo{
-		BountAt: boundAt,
-		URL:     url.URL,
-		TTL:     url.TTL,
+		BountAt:      boundAt,
+		URL:          url.URL,
+		ExhaustedURL: url.ExhaustedURL,
+		TTL:          url.TTL,
+		ExpiredURL:   url.ExpiredURL,
 	}
 	// the local expiration always take priority
 	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
@@ -88,7 +105,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 
 // calculateExpiration calculate the expiration of a url
 // returns the highest date betwwen the date binding + ttl and the date expiration date
-func calculateExpiration(u *URLInfo, ttl int64, expireDate time.Time) (expire time.Time) {
+func calculateExpiration(u *URLInfo, ttl uint64, expireDate time.Time) (expire time.Time) {
 	if ttl > 0 {
 		expire = u.BountAt.Add(time.Duration(ttl) * time.Second)
 	}
@@ -119,31 +136,36 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 	if err != nil {
 		return
 	}
-	expired := false
+
+	urlop := &URLOp{ID: urlInfo.ID}
+
 	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
 		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		expired = true
+		err = ErrURLExpired
+		common.DefaultIfEmptyStr(&urlInfo.ExpiredURL, Config.ShortID.ExpiredRedirectURL)
+		redirectURL = urlInfo.ExpiredURL
+
+		urlop.err = err
+		urlop.opcode = opcodeExpired
+		pushEvent(urlop)
+		return
 	}
 	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
 		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		expired = true
-	}
+		err = ErrURLExhausted
+		common.DefaultIfEmptyStr(&urlInfo.ExhaustedURL, Config.ShortID.ExhaustedRedirectURL)
+		redirectURL = urlInfo.ExhaustedURL
 
-	if expired {
-		err = ErrURLExpired // collect statistics
-		pushEvent(&URLOp{
-			opcode: opcodeExpired,
-			ID:     urlInfo.ID,
-			err:    err,
-		})
+		urlop.err = err
+		urlop.opcode = opcodeExpired
+		pushEvent(urlop)
 		return
 	}
+
 	// collect statistics
-	pushEvent(&URLOp{
-		opcode: opcodeGet,
-		ID:     urlInfo.ID,
-		err:    err,
-	})
+	urlop.err = err
+	urlop.opcode = opcodeGet
+	pushEvent(urlop)
 	// return the redirectUrl
 	redirectURL = urlInfo.URL
 	return

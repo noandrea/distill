@@ -12,29 +12,30 @@ import (
 
 // ServerConfig configuration for the server
 type ServerConfig struct {
-	APIKey          string `yaml:"apiKey"`
-	Host            string `yaml:"host"`
-	Port            int    `yaml:"port"`
-	DbPath          string `yaml:"dbPath"`
-	RootRedirect    string `yaml:"rootRedirect"`
-	ExpiredRedirect string `yaml:"expiredRedirect"`
+	APIKey string `yaml:"apiKey"`
+	Host   string `yaml:"host"`
+	Port   int    `yaml:"port"`
+	DbPath string `yaml:"dbPath"`
 }
 
 //ShortIDConfig configureaiont for the short id
 type ShortIDConfig struct {
-	Alphabet    string    `yaml:"alphabet"`
-	Length      int       `yaml:"length"`
-	MaxRequests int64     `yaml:"maxRequests"`
-	TTL         int64     `yaml:"ttl"`
-	ExpireOn    time.Time `yaml:"expireOn"`
+	Alphabet             string    `yaml:"alphabet" mapstructure:"alphabet"`
+	Length               int       `yaml:"length" mapstructure:"length"`
+	MaxRequests          uint64    `yaml:"max_requests" mapstructure:"max_requests"`
+	TTL                  uint64    `yaml:"ttl" mapstructure:"ttl"`
+	ExpireOn             time.Time `yaml:"expire_on" mapstructure:"expire_on"`
+	RootRedirectURL      string    `yaml:"root_redirect_url" mapstructure:"root_redirect_url"`
+	ExpiredRedirectURL   string    `yaml:"expired_redirect_url" mapstructure:"expired_redirect_url"`
+	ExhaustedRedirectURL string    `yaml:"exhausted_redirect_url" mapstructure:"exhausted_redirect_url"`
 }
 
 // TuningConfig fine tuning configuration
 type TuningConfig struct {
 	StatsEventsWorkerNum   int     `yaml:"statsEventsWorkerNum"`
 	StatsCaheSize          int     `yaml:"statsCacheSize"`
-	DbPurgeWritesCount     int     `yaml:"dbPurgeWritesCount"`
-	DbGCDeletesCount       int     `yaml:"dbGCDeletesCount"`
+	DbPurgeWritesCount     uint64  `yaml:"dbPurgeWritesCount"`
+	DbGCDeletesCount       uint64  `yaml:"dbGCDeletesCount"`
 	DbGCDiscardRation      float64 `yaml:"dbGCDiscardRation"`
 	URLCaheSize            int     `yaml:"URLCaheSize"`
 	BckCSVIterPrefetchSize int     `yaml:"exportIteratorPrefetchSize"`
@@ -58,18 +59,18 @@ func (c *ConfigSchema) Defaults() {
 	common.DefaultIfEmptyStr(&c.Server.Host, "0.0.0.0")
 	common.DefaultIfEmptyInt(&c.Server.Port, 1804)
 	common.DefaultIfEmptyStr(&c.Server.DbPath, "distill.db")
-	common.DefaultIfEmptyStr(&c.Server.RootRedirect, "https://github.com/noandrea/distill/wikis/welcome")
-	common.DefaultIfEmptyStr(&c.Server.ExpiredRedirect, "https://github.com/noandrea/distill/wikis/Expired-URL")
 
 	// for short id
+	common.DefaultIfEmptyStr(&c.ShortID.RootRedirectURL, "https://github.com/noandrea/distill/wikis/welcome")
+	common.DefaultIfEmptyStr(&c.ShortID.ExpiredRedirectURL, "https://github.com/noandrea/distill/wikis/Expired-URL")
 	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
 	common.DefaultIfEmptyInt(&c.ShortID.Length, 6)
 
 	// For tuning
 	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsWorkerNum, 1)
 	common.DefaultIfEmptyInt(&c.Tuning.StatsCaheSize, 1024)
-	common.DefaultIfEmptyInt(&c.Tuning.DbPurgeWritesCount, 2000)
-	common.DefaultIfEmptyInt(&c.Tuning.DbGCDeletesCount, 500)
+	common.DefaultIfEmptyUint64(&c.Tuning.DbPurgeWritesCount, 2000)
+	common.DefaultIfEmptyUint64(&c.Tuning.DbGCDeletesCount, 500)
 	if c.Tuning.DbGCDiscardRation <= 0 || c.Tuning.DbGCDiscardRation > 1 {
 		c.Tuning.DbGCDiscardRation = 0.5
 	}

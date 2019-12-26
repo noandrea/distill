@@ -37,22 +37,25 @@ var (
 // NewSession opens the underling storage
 func NewSession() {
 	// open the badger database
-	opts := badger.DefaultOptions
+	opts := badger.DefaultOptions(Config.Server.DbPath)
 	opts.SyncWrites = true
-	opts.Dir = Config.Server.DbPath
+	// opts.Dir = Config.Server.DbPath TODO: this should not be necessary anymore
+	err := os.MkdirAll(Config.Server.DbPath, os.ModePerm)
+	if err != nil {
+		mlog.Fatal(err)
+	}
 	opts.ValueDir = Config.Server.DbPath
-	var err error
 	db, err = badger.Open(opts)
 	if err != nil {
 		mlog.Fatal(err)
 	}
-	// initialzie internal cache
+	// initialize internal cache
 	uc = gcache.New(Config.Tuning.URLCaheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
 		Build()
-	// inintialize statistics
+	// initialize statistics
 	err = LoadStats()
 	if err != nil {
 		mlog.Fatal(err)
@@ -83,10 +86,10 @@ func whenRemoved(key, value interface{}) {
 func SaveStats() (err error) {
 	err = db.Update(func(txn *badger.Txn) (err error) {
 		// find all the urls
-		dbSetInt64(txn, statsKeyGlobalURLCount, st.Urls)
-		dbSetInt64(txn, statsKeyGlobalGetCount, st.Gets)
-		dbSetInt64(txn, statsKeyGlobalDelCount, st.Deletes)
-		dbSetInt64(txn, statsKeyGlobalUpdCount, st.Upserts)
+		dbSetUint64(txn, statsKeyGlobalURLCount, st.Urls)
+		dbSetUint64(txn, statsKeyGlobalGetCount, st.Gets)
+		dbSetUint64(txn, statsKeyGlobalDelCount, st.Deletes)
+		dbSetUint64(txn, statsKeyGlobalUpdCount, st.Upserts)
 		// update global statistics
 		return
 	})
@@ -98,10 +101,10 @@ func LoadStats() (err error) {
 	// initialize object
 	st = &Statistics{}
 	err = db.View(func(txn *badger.Txn) (err error) {
-		st.Urls = dbGetInt64(txn, statsKeyGlobalURLCount)
-		st.Gets = dbGetInt64(txn, statsKeyGlobalGetCount)
-		st.Deletes = dbGetInt64(txn, statsKeyGlobalDelCount)
-		st.Upserts = dbGetInt64(txn, statsKeyGlobalUpdCount)
+		st.Urls = dbGetUint64(txn, statsKeyGlobalURLCount)
+		st.Gets = dbGetUint64(txn, statsKeyGlobalGetCount)
+		st.Deletes = dbGetUint64(txn, statsKeyGlobalDelCount)
+		st.Upserts = dbGetUint64(txn, statsKeyGlobalUpdCount)
 		return
 	})
 	return
@@ -115,6 +118,8 @@ func UpdateStats(s Statistics) {
 	st.Gets += s.Gets
 	st.Deletes += s.Deletes
 	st.Upserts += s.Upserts
+	st.GetsExpired += s.GetsExpired
+	st.LastRequest = s.LastRequest
 }
 
 // ResetStats reset global statistcs
@@ -259,13 +264,11 @@ func Backup(outFile string) (err error) {
 			p := []byte{keyURLPrefix}
 			for it.Seek(p); it.ValidForPrefix(p); it.Next() {
 				// retrieve values
-				v, err := it.Item().Value()
-				if err != nil {
-					break
-				}
-				u := &URLInfo{}
-				u.UnmarshalBinary(v)
-				err = csvW.Write(u.MarshalRecord())
+				err := it.Item().Value(func(v []byte) error {
+					u := &URLInfo{}
+					u.UnmarshalBinary(v)
+					return csvW.Write(u.MarshalRecord())
+				})
 				if err != nil {
 					break
 				}
@@ -288,7 +291,7 @@ func Restore(inFile string) (count int, err error) {
 		if err != nil {
 			return 0, err
 		}
-		db.Load(fp)
+		db.Load(fp, 16)
 		fp.Close()
 	case backupExtCsv:
 		fp, err := os.Open(inFile)
@@ -349,12 +352,10 @@ func (i *URLIterator) HasNext() bool {
 
 // NextURL get the next URL from the iterator
 func (i *URLIterator) NextURL() (u *URLInfo, err error) {
-	v, err := i.Iterator.Item().Value()
-	if err != nil {
-		return
-	}
 	u = &URLInfo{}
-	err = u.UnmarshalBinary(v)
+	err = i.Iterator.Item().Value(func(v []byte) error {
+		return u.UnmarshalBinary(v)
+	})
 	return
 }
 
@@ -375,7 +376,7 @@ func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
 	return
 }
 
-func dbSetInt64(txn *badger.Txn, k []byte, val int64) {
+func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
 	err := txn.Set(k, itoa(val))
 	mlog.Trace("dbSetInt64 write %s", k)
 	if err != nil {
@@ -398,21 +399,25 @@ func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 	if err != nil {
 		return
 	}
-	val, err = item.Value()
+	err = item.Value(func(v []byte) error {
+		val = v
+		return nil
+	})
 	mlog.Trace("dbGet read %s v:%d ", k, item.Version())
 	return
 }
 
-func dbGetInt64(txn *badger.Txn, k []byte) (i int64) {
+func dbGetUint64(txn *badger.Txn, k []byte) (i uint64) {
 	item, err := txn.Get(k)
 	if err != nil {
 		return
 	}
-	val, err := item.Value()
+	val := numberZero
+	err = item.Value(func(v []byte) error {
+		val = v
+		return nil
+	})
 	mlog.Trace("dbGetInt64 read %s v:%d ", k, item.Version())
-	if err != nil {
-		val = numberZero
-	}
 	i = atoi(val)
 	return
 }
