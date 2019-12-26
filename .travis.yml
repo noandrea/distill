@@ -1,6 +1,5 @@
 branches:
   only:
-  - feature/ci
   - master
   - develop
 
