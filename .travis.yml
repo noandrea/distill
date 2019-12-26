@@ -7,7 +7,6 @@ branches:
 language: go
 go:
   - "1.13"
-  - tip
 
 env:
   global:
