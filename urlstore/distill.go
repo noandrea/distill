@@ -33,21 +33,21 @@ func UpsertURLSimple(url *URLReq) (id string, err error) {
 func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) (id string, err error) {
 	// preprocess the url and generates the id if necessary
 	// chech that the target url is a valid url
-	if _, err = net.ParseRequestURI(url.URL); err != nil {
+	if _, err = net.Parse(url.URL); err != nil {
 		mlog.Info("%s", url.URL)
 		mlog.Error(err)
 		return
 	}
 	// check that, if set ExhaustedURL is a valid url
 	if len(url.ExhaustedURL) > 0 {
-		if _, err = net.ParseRequestURI(url.ExhaustedURL); err != nil {
+		if _, err = net.Parse(url.ExhaustedURL); err != nil {
 			mlog.Error(err)
 			return
 		}
 	}
 	// check that, if set ExhaustedURL is a valid url
 	if len(url.ExpiredURL) > 0 {
-		if _, err = net.ParseRequestURI(url.ExpiredURL); err != nil {
+		if _, err = net.Parse(url.ExpiredURL); err != nil {
 			mlog.Error(err)
 			return
 		}
