@@ -4,6 +4,8 @@ Another url shortener
 
 [![Build Status](https://travis-ci.com/noandrea/distill.svg?branch=master)](https://travis-ci.com/noandrea/distill) [![codecov](https://codecov.io/gh/noandrea/distill/branch/master/graph/badge.svg)](https://codecov.io/gh/noandrea/distill) [![GoDoc](https://godoc.org/github.com/noandrea/distill?status.svg)](https://godoc.org/github.com/noandrea/distill) [![Go Report Card](https://goreportcard.com/badge/github.com/noandrea/distill)](https://goreportcard.com/report/github.com/noandrea/distill)
 
+[![Docker](https://img.shields.io/badge/docker-noandrea/distill-blue)]
+
 ## Motivations
 
 Existing url shorteners are not suitable for a private deploy use or are too complex in terms of requirements.
@@ -207,7 +209,9 @@ For the data folder the mount point is `/data`.
 
 A [`docker-compose`](https://docs.docker.com/compose/) example is available in the [`examples/docker`](https://github.com/noandrea/distill/blob/master/examples/docker)
 
+### Systemd 
 
+Distill can be run via `systemd`, check the [example](https://github.com/noandrea/distill/blob/master/examples/systemd) configuration.
 
 
 

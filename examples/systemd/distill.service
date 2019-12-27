@@ -1,0 +1,15 @@
+[Unit]
+Description=distill
+Wants=basic.target
+After=basic.target network.target
+
+[Service]
+SyslogIdentifier=distill
+StandardOutput=syslog
+StandardError=syslog
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/distill start --config /etc/distill/settings.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
