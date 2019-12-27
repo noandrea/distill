@@ -271,20 +271,27 @@ var ErrInvalidBackupRecord = fmt.Errorf("Invalid backup record")
 //  |____||____||________|  |______|   \______.'
 //
 
-func keyURL(id string) (k []byte) {
+func keyURL(id string) (k []byte, err error) {
 	return key(keyURLPrefix, id)
 }
 
 func keySys(id string) (k []byte) {
-	return key(keySysPrefix, id)
+	k, _ = key(keySysPrefix, id)
+	return
 }
 
 func keyGlobalStat(id string) (k []byte) {
-	return key(keyStatPrefix, id)
+	k, _ = key(keyStatPrefix, id)
+	return
 }
 
-func key(prefix byte, id string) (k []byte) {
+func key(prefix byte, id string) (k []byte, err error) {
 	idb := []byte(id)
+	idbl := len(idb)
+	if idbl == 0 {
+		err = fmt.Errorf("Empty id not allowed")
+		return
+	}
 	k = make([]byte, len(idb)+1)
 	k[0] = prefix
 	copy(k[1:], idb)
