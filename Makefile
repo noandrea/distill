@@ -24,7 +24,7 @@ build: build-dist
 
 build-dist: $(GOFILES)
 	@echo build binary to $(OUTPUTFOLDER)
-	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags "-X main.Version=$(GIT_DESCR)" -o $(OUTPUTFOLDER)/distill .
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags "-s -w -extldflags \"-static\" -X main.Version=$(GIT_DESCR)" -o $(OUTPUTFOLDER)/distill .
 	@echo copy resources
 	cp -r README.md LICENSE configs $(OUTPUTFOLDER)
 	@echo done
@@ -53,16 +53,14 @@ clean:
 
 docker: docker-build
 
-docker-build: build-dist
-	@echo copy resources
-	@cp configs/settings.docker.yaml $(OUTPUTFOLDER)/settings.yaml
+docker-build:
 	@echo build image
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f ./build/docker/Dockerfile .
+	docker build -t $(DOCKER_IMAGE) -f ./build/docker/Dockerfile .
 	@echo done
 
 docker-push: docker-build
 	@echo push image
-	docker tag $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_IMAGE):latest
+	docker tag $(DOCKER_IMAGE) $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)
 	docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)
 	@echo done
 
