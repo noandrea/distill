@@ -6,13 +6,13 @@
 version: '3.1'
 services:
   distill:
-    image: registry.github.com/noandrea/distill:latest
+    image: noandrea/distill:latest
     container_name: distill
     restart: unless-stopped
     ports:
       - 1804:1804
     volumes:
-      - ./distil.db:/data/db
-      - ./settings.yaml:/data/configs/settings.docker.yaml
+      - ./data:/data # this is where the database is stored
+      - ./settings.yaml:/settings.docker.yaml # this is to override the settings file
 
 
