@@ -1,0 +1,55 @@
+
+### GLOBAL REDIRECTS
+POST http://localhost:1804/api/short
+X-API-KEY: 123123_changeme_changeme
+Content-Type: application/json
+
+{
+    
+    "url": "https://gist.githubusercontent.com/noandrea/b636b1e8361e5f8f1250240ce0f87fe5/raw/3daa6dd7f5923870e13721ca8412bdae05c25f7e/found",
+    "url_exhausted" : "https://exahusted.com",
+    "url_expired" : "https://expired.com",
+    "max_requests": 2,
+    "ttl": 0,
+    "expire_on": "2019-03-17T22:05:28+01:00"
+}
+
+###
+
+GET http://localhost:1804/api/stats/globalredirects
+X-API-KEY: 123123_changeme_changeme
+
+###
+
+GET http://localhost:1804/globalredirects
+X-API-KEY: 123123_changeme_changeme
+
+
+###
+
+GET http://localhost:1804/api/stats
+X-API-KEY: 123123_changeme_changeme
+
+### DELETE 
+DELETE http://localhost:1804/api/short/globalredirects
+X-API-KEY: 123123_changeme_changeme
+
+### BACKUP
+
+GET http://localhost:1804/api/db/backup
+X-API-KEY: 123123_changeme_changeme
+
+### NUKE
+
+GET http://localhost:1804/api/db/nuke
+X-API-KEY: 123123_changeme_changeme
+
+### RESTORE
+
+GET http://localhost:1804/api/db/restore
+X-API-KEY: 123123_changeme_changeme
+
+###
+
+GET http://aet.li/api/stats
+X-API-KEY: 123123_changeme_changeme
