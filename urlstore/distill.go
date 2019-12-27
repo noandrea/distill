@@ -15,9 +15,13 @@ import (
 )
 
 // generateID generates a new id
+// it is guaranteed that returns an id of at least 1 character
 func generateID() (shortID string) {
 	a := Config.ShortID.Alphabet
-	l := Config.ShortID.Length
+	l := 1
+	if Config.ShortID.Length > 1 {
+		l = Config.ShortID.Length
+	}
 	// a and l are validated before
 	shortID, _ = common.RandomString(a, l)
 	return

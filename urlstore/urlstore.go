@@ -153,16 +153,18 @@ func GetStats() (s *Statistics) {
 	return st
 }
 
-// Insert an url into the the urlstore
+// Insert an url into the url store
 func Insert(u *URLInfo) (err error) {
 	err = db.Update(func(txn *badger.Txn) (err error) {
 		u.ID = generateID()
-		key := keyURL(u.ID)
+		// generateID always return a valid id
+		key, _ := keyURL(u.ID)
 		// TODO: need another limit (numeber of retries)
 		// TODO: also check the type of error
 		for _, err = dbGet(txn, key); err == nil; {
 			u.ID = generateID()
-			key = keyURL(u.ID)
+			// generateID always return a valid id
+			key, _ = keyURL(u.ID)
 		}
 		err = dbSetBin(txn, key, u)
 		return
@@ -173,8 +175,12 @@ func Insert(u *URLInfo) (err error) {
 // Upsert an url into the the urlstore
 func Upsert(u *URLInfo) (err error) {
 	err = db.Update(func(txn *badger.Txn) (err error) {
-		err = dbSetBin(txn, keyURL(u.ID), u)
-		return err
+		key, err := keyURL(u.ID)
+		if err != nil {
+			return
+		}
+		err = dbSetBin(txn, key, u)
+		return
 	})
 	return err
 }
@@ -186,7 +192,10 @@ func Peek(id string) (u *URLInfo, err error) {
 		mlog.Trace("cache miss for %s", id)
 		err = db.View(func(txn *badger.Txn) (err error) {
 			u = &URLInfo{}
-			ku := keyURL(id)
+			ku, err := keyURL(id)
+			if err != nil {
+				return
+			}
 			err = dbGetBin(txn, ku, u)
 			if err != nil {
 				return
@@ -217,7 +226,10 @@ func Delete(id string) (err error) {
 		// remove from cache
 		uc.Remove(id)
 		// remove from storage
-		key := keyURL(id)
+		key, err := keyURL(id)
+		if err != nil {
+			return
+		}
 		// then delete the keys
 		err = txn.Delete(key)
 		mlog.Trace("Delete() 01 %v", err)
