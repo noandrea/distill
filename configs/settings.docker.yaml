@@ -7,7 +7,7 @@ server:
 
 # short id configuration
 shortId:
-  alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  alphabet: "abcdefghkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679"
   length: 6
   ttl: 0          # default value, 0 means no expiration
   max_requests: 0  # default value, 0 means no limits
