@@ -283,22 +283,17 @@
 
     function nsubmitForm() {
         // initiate variables with form content
-		var email = $("#nemail").val();
-        var terms = $("#nterms").val();
-        $.ajax({
-            type: "POST",
-            url: "php/newsletterform-process.php",
-            data: "email=" + email + "&terms=" + terms, 
-            success: function(text) {
-                if (text == "success") {
-                    nformSuccess();
-                } else {
-                    nformError();
-                    nsubmitMSG(false, text);
-                }
-            }
-        });
-	}
+        var $form = $("#newsletterForm");
+      $.post($form.attr("action"), $form.serialize()).then(
+        function() {
+          nformSuccess();
+        },
+        function(reply) {
+          nformError();
+          nsubmitMSG(false, reply.text);
+        }
+      ); 
+	  }
 
     function nformSuccess() {
         $("#newsletterForm")[0].reset();
