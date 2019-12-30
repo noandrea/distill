@@ -282,8 +282,8 @@
     });
 
     function nsubmitForm() {
-        // initiate variables with form content
-        var $form = $("#newsletterForm");
+      // initiate variables with form content
+      var $form = $("#newsletterForm");
       $.post($form.attr("action"), $form.serialize()).then(
         function() {
           nformSuccess();
