@@ -4,9 +4,9 @@
 #
 
 server:
-  apiKey: sSftPgEULMt4UWMh8idQgaTiJh9dKlXfdeiB5qcoCxc!ZehVik
+  api_key: sSftPgEULMt4UWMh8idQgaTiJh9dKlXfdeiB5qcoCxc!ZehVik
   host: 0.0.0.0
   port: 1804
-shortId:
+short_id:
   alphabet: abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789
   length: 6

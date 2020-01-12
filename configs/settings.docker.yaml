@@ -2,11 +2,11 @@
 server:
   host: "0.0.0.0"
   port: 1804
-  apiKey: 1234567890abc
-  dbPath: /data/db
+  api_key: 1234567890abc
+  db_path: /data/db
 
 # short id configuration
-shortId:
+short_id:
   alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   length: 6
   ttl: 0          # default value, 0 means no expiration
