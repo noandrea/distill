@@ -1,0 +1,37 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: distill
+  name: distill
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: distill
+  template:
+    metadata:
+      labels:
+        app: distill
+    spec:
+      containers:
+      - env:
+        - name: ENV_VAR
+          value: value
+        image: noandrea/distill
+        imagePullPolicy: Always
+        name: distill
+        ports:
+        - containerPort: 1804
+          name: web
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /etc/aepps
+          name: config-volume
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: distill-config
+        name: config-volume

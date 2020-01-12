@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/rule-type: PathPrefix
+  name: distill-ingress
+spec:
+  rules:
+  - host: distill.plus
+    http:
+      paths:
+      - backend:
+          serviceName: distill-service
+          servicePort: 80
+        path: /
