@@ -34,7 +34,7 @@ var (
 	stM sync.Mutex
 )
 
-// NewSession opens the underling storage
+//NewSession opens the underling storage
 func NewSession() {
 	// open the badger database
 	opts := badger.DefaultOptions(Config.Server.DbPath)
@@ -50,7 +50,7 @@ func NewSession() {
 		mlog.Fatal(err)
 	}
 	// initialize internal cache
-	uc = gcache.New(Config.Tuning.URLCaheSize).
+	uc = gcache.New(Config.Tuning.URLCacheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
