@@ -1,11 +1,13 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
+    # TODO: this examples assumes that traefik is used as ingress
     kubernetes.io/ingress.class: traefik
     traefik.ingress.kubernetes.io/rule-type: PathPrefix
   name: distill-ingress
 spec:
   rules:
+  # TODO: use your own hostname
   - host: distill.plus
     http:
       paths:
