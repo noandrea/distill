@@ -4,7 +4,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: distill-data
+  name: distill-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -12,12 +12,12 @@ spec:
     requests:
       storage: 2Gi
   storageClassName: gp2
-apiVersion: extensions/v1beta1
 
 ---
 # Deployment
 # this is distill, since it uses an embedded db
 # it cant really scale behind 1 replica
+apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
@@ -53,7 +53,7 @@ spec:
       volumes:
       - name: distill-data
         persistentVolumeClaim:
-          claimName: distill-data
+          claimName: distill-data-pvc
 
 
 ---
