@@ -1,17 +1,3 @@
-// Copyright © 2018 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
@@ -20,7 +6,7 @@ import (
 
 	"github.com/noandrea/distill/urlstore"
 
-	"github.com/jbrodriguez/mlog"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +21,7 @@ var importCmd = &cobra.Command{
 var csvFile string
 
 func init() {
-	RootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(importCmd)
 
 	// Here you will define your flags and configuration settings.
 
@@ -50,18 +36,18 @@ func init() {
 }
 
 func importCsv(cmd *cobra.Command, args []string) {
-	urlstore.NewSession()
+	urlstore.NewSession(settings)
 	defer urlstore.CloseSession()
 	abp, err := filepath.Abs(csvFile)
 	if err != nil {
-		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
+		log.Fatalf("Invalid path %s: %v", csvFile, err)
 	}
 	if _, err = os.Stat(abp); os.IsNotExist(err) {
-		mlog.Fatalf("Invalid path %s: %v", csvFile, err)
+		log.Fatalf("Invalid path %s: %v", csvFile, err)
 	}
 	if rows, err := urlstore.ImportCSV(abp); err != nil {
-		mlog.Fatalf("Error create backup at %s: %v", csvFile, err)
+		log.Fatalf("Error create backup at %s: %v", csvFile, err)
 	} else {
-		mlog.Info("Import complete, %d url record loaded", rows)
+		log.Info("Import complete, ", rows, " url record loaded")
 	}
 }

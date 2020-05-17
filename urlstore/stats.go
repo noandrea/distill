@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/bluele/gcache"
-	"github.com/jbrodriguez/mlog"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dgraph-io/badger"
 )
@@ -48,7 +48,7 @@ func processEvents(workerID int) {
 		if !isChannelOpen {
 			break
 		}
-		mlog.Trace(">>> Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
+		log.Tracef(">>> Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 		switch uo.opcode {
 		case opcodeGet:
 			globalStatistics.record(1, 0, 0, 0, 0)
@@ -60,10 +60,10 @@ func processEvents(workerID int) {
 		case opcodeExpired:
 			globalStatistics.record(0, 0, 0, 0, 1)
 		}
-		mlog.Trace("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
+		log.Tracef("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
 	}
 	// complete task
-	mlog.Trace("Stop event processor id: %v", workerID)
+	log.Tracef("Stop event processor id: %v", workerID)
 	wg.Done()
 
 }
@@ -118,7 +118,7 @@ func runDbMaintenance() {
 
 	// caluclate if gc is necessary
 	deletes := globalStatistics.Deletes
-	gcLimit := Config.Tuning.DbGCDeletesCount
+	gcLimit := settings.Tuning.DbGCDeletesCount
 	gcCount := uint64(0)
 	// retrieve the gcCount from the db
 	db.View(func(txn *badger.Txn) (err error) {
@@ -133,12 +133,12 @@ func runDbMaintenance() {
 	}
 
 	if deletes-latestGC > gcLimit {
-		mlog.Info("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+		log.Infof("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
 
-		mlog.Info("")
+		log.Info("")
 
-		db.RunValueLogGC(Config.Tuning.DbGCDiscardRation)
-		mlog.Info("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+		db.RunValueLogGC(settings.Tuning.DbGCDiscardRation)
+		log.Infof("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
 		// update the gcCount
 		db.Update(func(txn *badger.Txn) (err error) {
 			gcCount++

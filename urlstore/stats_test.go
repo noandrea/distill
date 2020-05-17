@@ -50,8 +50,8 @@ func Test_loadGlobalStatistics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
-			NewSession()
+			s := buildConfigTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+			NewSession(s)
 			ids := []string{}
 			// run inserts
 			for i := uint64(0); i < tt.wantS.Upserts; i++ {
@@ -71,7 +71,7 @@ func Test_loadGlobalStatistics(t *testing.T) {
 				GetURLRedirect(ids[i%tt.wantS.Urls])
 			}
 			CloseSession()
-			NewSession()
+			NewSession(s)
 
 			err := LoadStats()
 			gotS := GetStats()

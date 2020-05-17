@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jbrodriguez/mlog"
 	"github.com/noandrea/distill/pkg/common"
+	log "github.com/sirupsen/logrus"
 )
 
 // generateID generates a new id
 // it is guaranteed that returns an id of at least 1 character
-func generateID() (shortID string) {
-	a := Config.ShortID.Alphabet
+func generateID(settings *ShortIDConfig) (shortID string) {
+	a := settings.Alphabet
 	l := 1
-	if Config.ShortID.Length > 1 {
-		l = Config.ShortID.Length
+	if settings.Length > 1 {
+		l = settings.Length
 	}
 	// a and l are validated before
 	shortID, _ = common.RandomString(a, l)
@@ -38,21 +38,21 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 	// preprocess the url and generates the id if necessary
 	// chech that the target url is a valid url
 	if _, err = net.Parse(url.URL); err != nil {
-		mlog.Info("%s", url.URL)
-		mlog.Error(err)
+		log.Info(url.URL)
+		log.Error(err)
 		return
 	}
 	// check that, if set ExhaustedURL is a valid url
 	if len(url.ExhaustedURL) > 0 {
 		if _, err = net.Parse(url.ExhaustedURL); err != nil {
-			mlog.Error(err)
+			log.Error(err)
 			return
 		}
 	}
 	// check that, if set ExhaustedURL is a valid url
 	if len(url.ExpiredURL) > 0 {
 		if _, err = net.Parse(url.ExpiredURL); err != nil {
-			mlog.Error(err)
+			log.Error(err)
 			return
 		}
 	}
@@ -69,12 +69,12 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
 	if u.ExpireOn.IsZero() {
 		// global expiration
-		u.ExpireOn = calculateExpiration(u, Config.ShortID.TTL, Config.ShortID.ExpireOn)
+		u.ExpireOn = calculateExpiration(u, settings.ShortID.TTL, settings.ShortID.ExpireOn)
 	}
 	// set max requests, the local version always has priority
 	u.MaxRequests = url.MaxRequests
 	if u.MaxRequests == 0 {
-		u.MaxRequests = Config.ShortID.MaxRequests
+		u.MaxRequests = settings.ShortID.MaxRequests
 	}
 	// cleanup the string id
 	u.ID = strings.TrimSpace(url.ID)
@@ -83,14 +83,14 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 		err = Insert(u)
 	} else {
 		// TODO: check longest allowed key in badger
-		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(Config.ShortID.Alphabet))
+		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(settings.ShortID.Alphabet))
 		m, _ := regexp.MatchString(p, url.ID)
 		if forceAlphabet && m {
 			err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
 			return "", err
 		}
-		if forceLength && len(url.ID) != Config.ShortID.Length {
-			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), Config.ShortID.Length)
+		if forceLength && len(url.ID) != settings.ShortID.Length {
+			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), settings.ShortID.Length)
 			return "", err
 		}
 		err = Upsert(u)
@@ -108,7 +108,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 }
 
 // calculateExpiration calculate the expiration of a url
-// returns the highest date betwwen the date binding + ttl and the date expiration date
+// returns the highest date between the date binding + ttl and the date expiration date
 func calculateExpiration(u *URLInfo, ttl uint64, expireDate time.Time) (expire time.Time) {
 	if ttl > 0 {
 		expire = u.BountAt.Add(time.Duration(ttl) * time.Second)
@@ -144,9 +144,9 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 	urlop := &URLOp{ID: urlInfo.ID}
 
 	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
-		mlog.Trace("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+		log.Tracef("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
 		err = ErrURLExpired
-		common.DefaultIfEmptyStr(&urlInfo.ExpiredURL, Config.ShortID.ExpiredRedirectURL)
+		common.DefaultIfEmptyStr(&urlInfo.ExpiredURL, settings.ShortID.ExpiredRedirectURL)
 		redirectURL = urlInfo.ExpiredURL
 
 		urlop.err = err
@@ -155,9 +155,9 @@ func GetURLRedirect(id string) (redirectURL string, err error) {
 		return
 	}
 	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
-		mlog.Trace("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
+		log.Tracef("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
 		err = ErrURLExhausted
-		common.DefaultIfEmptyStr(&urlInfo.ExhaustedURL, Config.ShortID.ExhaustedRedirectURL)
+		common.DefaultIfEmptyStr(&urlInfo.ExhaustedURL, settings.ShortID.ExhaustedRedirectURL)
 		redirectURL = urlInfo.ExhaustedURL
 
 		urlop.err = err
@@ -193,11 +193,11 @@ func ImportCSV(inFile string) (rows int, err error) {
 	for {
 		record, err := csvR.Read()
 		if err == io.EOF {
-			mlog.Error(err)
+			log.Error(err)
 			break
 		}
 		if err != nil {
-			mlog.Error(err)
+			log.Error(err)
 			break
 		}
 		if rows == 0 && common.IsEqStr(record[0], "url") {
@@ -207,16 +207,16 @@ func ImportCSV(inFile string) (rows int, err error) {
 		u := &URLReq{}
 		err = u.UnmarshalRecord(record)
 		if err != nil {
-			mlog.Error(err)
+			log.Error(err)
 			break
 		}
 		_, err = UpsertURL(u, false, false, time.Now())
 		if err != nil {
-			mlog.Error(err)
+			log.Error(err)
 			break
 		}
 		rows++
 	}
-	mlog.Info("Import complete with %d rows in %s", rows, time.Since(start))
+	log.Infof("Import complete with %d rows in %s", rows, time.Since(start))
 	return
 }

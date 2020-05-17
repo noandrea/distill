@@ -11,7 +11,7 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
-	"github.com/jbrodriguez/mlog"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -28,29 +28,31 @@ var (
 )
 
 var (
-	db  *badger.DB
-	uc  gcache.Cache
-	st  *Statistics
-	stM sync.Mutex
+	db       *badger.DB
+	uc       gcache.Cache
+	st       *Statistics
+	stM      sync.Mutex
+	settings ConfigSchema
 )
 
 //NewSession opens the underling storage
-func NewSession() {
+func NewSession(cfg ConfigSchema) {
+	settings = cfg
 	// open the badger database
-	opts := badger.DefaultOptions(Config.Server.DbPath)
+	opts := badger.DefaultOptions(settings.Server.DbPath)
 	opts.SyncWrites = true
-	// opts.Dir = Config.Server.DbPath TODO: this should not be necessary anymore
-	err := os.MkdirAll(Config.Server.DbPath, os.ModePerm)
+	// opts.Dir = settings.Server.DbPath TODO: this should not be necessary anymore
+	err := os.MkdirAll(settings.Server.DbPath, os.ModePerm)
 	if err != nil {
-		mlog.Fatal(err)
+		log.Fatal(err)
 	}
-	opts.ValueDir = Config.Server.DbPath
+	opts.ValueDir = settings.Server.DbPath
 	db, err = badger.Open(opts)
 	if err != nil {
-		mlog.Fatal(err)
+		log.Fatal(err)
 	}
 	// initialize internal cache
-	uc = gcache.New(Config.Tuning.URLCacheSize).
+	uc = gcache.New(settings.Tuning.URLCacheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
@@ -58,7 +60,7 @@ func NewSession() {
 	// initialize statistics
 	err = LoadStats()
 	if err != nil {
-		mlog.Fatal(err)
+		log.Fatal(err)
 	}
 }
 
@@ -132,7 +134,7 @@ func ResetStats() (err error) {
 	for i.HasNext() {
 		u, err := i.NextURL()
 		if err != nil {
-			mlog.Warning("Warning looping through the URLs")
+			log.Warning("Warning looping through the URLs")
 		}
 		st.Urls++
 		st.Upserts++
@@ -143,7 +145,7 @@ func ResetStats() (err error) {
 	// run the update
 	err = SaveStats()
 	if err != nil {
-		mlog.Warning("Error while rest stats %v", err)
+		log.Warning("Error while rest stats:", err)
 	}
 	return
 }
@@ -156,13 +158,13 @@ func GetStats() (s *Statistics) {
 // Insert an url into the url store
 func Insert(u *URLInfo) (err error) {
 	err = db.Update(func(txn *badger.Txn) (err error) {
-		u.ID = generateID()
+		u.ID = generateID(&settings.ShortID)
 		// generateID always return a valid id
 		key, _ := keyURL(u.ID)
 		// TODO: need another limit (numeber of retries)
 		// TODO: also check the type of error
 		for _, err = dbGet(txn, key); err == nil; {
-			u.ID = generateID()
+			u.ID = generateID(&settings.ShortID)
 			// generateID always return a valid id
 			key, _ = keyURL(u.ID)
 		}
@@ -189,7 +191,7 @@ func Upsert(u *URLInfo) (err error) {
 func Peek(id string) (u *URLInfo, err error) {
 	uic, err := uc.Get(id)
 	if err == gcache.KeyNotFoundError {
-		mlog.Trace("cache miss for %s", id)
+		log.Trace("cache miss for ", id)
 		err = db.View(func(txn *badger.Txn) (err error) {
 			u = &URLInfo{}
 			ku, err := keyURL(id)
@@ -232,10 +234,10 @@ func Delete(id string) (err error) {
 		}
 		// then delete the keys
 		err = txn.Delete(key)
-		mlog.Trace("Delete() 01 %v", err)
+		log.Trace("Delete() 01:", err)
 		return err
 	})
-	mlog.Trace("Delete() 02 %v", err)
+	log.Trace("Delete() 02:", err)
 	return
 }
 
@@ -253,7 +255,7 @@ func Backup(outFile string) (err error) {
 		if err != nil {
 			return err
 		}
-		mlog.Info("Backup completed at %v", ts)
+		log.Info("Backup completed at ", ts)
 	case backupExtCsv:
 		err = db.View(func(txn *badger.Txn) (err error) {
 			// create output file
@@ -268,7 +270,7 @@ func Backup(outFile string) (err error) {
 
 			// open the iterator
 			opts := badger.DefaultIteratorOptions
-			opts.PrefetchSize = Config.Tuning.BckCSVIterPrefetchSize
+			opts.PrefetchSize = settings.Tuning.BckCSVIterPrefetchSize
 			opts.PrefetchValues = true
 			it := txn.NewIterator(opts)
 			defer it.Close()
@@ -288,8 +290,8 @@ func Backup(outFile string) (err error) {
 			return
 		})
 	default:
-		err = fmt.Errorf("Unrecoginzed backup format %v", ext)
-		mlog.Warning("Unrecoginzed backup format %v", ext)
+		err = fmt.Errorf("Unrecognized backup format %v", ext)
+		log.Warning("Unrecognized backup format:", ext)
 	}
 	return
 }
@@ -330,8 +332,8 @@ func Restore(inFile string) (count int, err error) {
 		}
 		fp.Close()
 	default:
-		err = fmt.Errorf("Unrecoginzed backup format %v", ext)
-		mlog.Warning("Unrecoginzed backup format %v", ext)
+		err = fmt.Errorf("Unrecognized backup format %v", ext)
+		log.Warning("Unrecognized backup format:", ext)
 	}
 	return
 }
@@ -383,16 +385,16 @@ func (i *URLIterator) Close() {
 func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
 	for _, k := range keys {
 		err = txn.Delete(k)
-		mlog.Trace("dbDel write %s", k)
+		log.Trace("dbDel write:", k)
 	}
 	return
 }
 
 func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
 	err := txn.Set(k, itoa(val))
-	mlog.Trace("dbSetInt64 write %s", k)
+	log.Trace("dbSetInt64 write:", k)
 	if err != nil {
-		mlog.Warning("update key %X error %v ", k, err)
+		log.Warningf("update key %X error %v ", k, err)
 	}
 }
 
@@ -402,7 +404,7 @@ func dbSetBin(txn *badger.Txn, k []byte, val BinSerializable) (err error) {
 		return
 	}
 	err = txn.Set(k, binData)
-	mlog.Trace("dbSetBin write %s", k)
+	log.Trace("dbSetBin write:", k)
 	return
 }
 
@@ -415,7 +417,7 @@ func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 		val = v
 		return nil
 	})
-	mlog.Trace("dbGet read %s v:%d ", k, item.Version())
+	log.Tracef("dbGet read %s v:%d ", k, item.Version())
 	return
 }
 
@@ -429,7 +431,7 @@ func dbGetUint64(txn *badger.Txn, k []byte) (i uint64) {
 		val = v
 		return nil
 	})
-	mlog.Trace("dbGetInt64 read %s v:%d ", k, item.Version())
+	log.Tracef("dbGetInt64 read %s v:%d ", k, item.Version())
 	i = atoi(val)
 	return
 }

@@ -3,7 +3,6 @@ package urlstore
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"path/filepath"
 	"regexp"
@@ -11,41 +10,35 @@ import (
 	"time"
 
 	"github.com/noandrea/distill/pkg/common"
+	"github.com/spf13/viper"
 
-	"github.com/jbrodriguez/mlog"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
-func setupLog() {
-	mlog.DefaultFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
-	//mlog.Start(mlog.LevelTrace, "")
-	mlog.Start(mlog.LevelInfo, "")
+func _defaultConfig() (settings ConfigSchema) {
+	Defaults()
+	viper.Unmarshal(&settings)
+	return
 }
 
-func buildConifgTest() {
-	setupLog()
+func buildConfigTest() (s ConfigSchema) {
 	// path
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
-	Config = ConfigSchema{
-		Server: ServerConfig{
-			DbPath: path,
-			APIKey: common.GenerateSecret(),
-		},
-		ShortID: ShortIDConfig{
-			Alphabet: "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
-			Length:   6,
-		},
-	}
-	Config.Defaults()
-	Config.Validate()
+	s = _defaultConfig()
+	s.Server.DbPath = path
+	s.Server.APIKey = common.GenerateSecret()
+	s.ShortID.Alphabet = "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	s.ShortID.Length = 6
+	s.Validate()
+	return
 }
 
-func buildConifgPanicTest() {
-	setupLog()
+func buildConfigPanicTest() (s ConfigSchema) {
 	path := " cann not exists / ssa "
 	fmt.Println("test db folder is ", path)
-	Config = ConfigSchema{
+	s = ConfigSchema{
 		Server: ServerConfig{
 			DbPath: path,
 			APIKey: common.GenerateSecret(),
@@ -55,55 +48,47 @@ func buildConifgPanicTest() {
 			Length:   6,
 		},
 	}
-	Config.Defaults()
-	Config.Validate()
+	Defaults()
+	s.Validate()
+	return
 }
 
-func buildConifgTestShortIDParams(alphabet string, length int) {
-	setupLog()
+func buildConfigTestShortIDParams(alphabet string, length int) (s ConfigSchema) {
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
-	Config = ConfigSchema{
-		Server: ServerConfig{
-			DbPath: path,
-			APIKey: common.GenerateSecret(),
-		},
-		ShortID: ShortIDConfig{
-			Alphabet:    alphabet,
-			Length:      length,
-			TTL:         0,
-			MaxRequests: 0,
-		},
-		Tuning: TuningConfig{
-			StatsEventsWorkerNum: 2,
-		},
-	}
-	Config.Defaults()
-	Config.Validate()
+	s = _defaultConfig()
+
+	s.Server.DbPath = path
+	s.Server.APIKey = common.GenerateSecret()
+
+	s.ShortID.Alphabet = alphabet
+	s.ShortID.Length = length
+	s.ShortID.TTL = 0
+	s.ShortID.MaxRequests = 0
+
+	s.Tuning.StatsEventsWorkerNum = 2
+
+	return
 }
 
-func buildConifgTestExpireParams(ttl, maxr uint64, expire time.Time) {
-	setupLog()
+func buildConfigTestExpireParams(ttl, maxr uint64, expire time.Time) (s ConfigSchema) {
 	path, _ := ioutil.TempDir("/tmp/", "distill")
 	fmt.Println("test db folder is ", path)
-	Config = ConfigSchema{
-		Server: ServerConfig{
-			DbPath: path,
-			APIKey: common.GenerateSecret(),
-		},
-		ShortID: ShortIDConfig{
-			Alphabet:    "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
-			Length:      6,
-			TTL:         ttl,
-			MaxRequests: maxr,
-			ExpireOn:    expire,
-		},
-		Tuning: TuningConfig{
-			StatsEventsWorkerNum: 20,
-		},
-	}
-	Config.Defaults()
-	Config.Validate()
+	s = _defaultConfig()
+
+	s.Server.DbPath = path
+	s.Server.APIKey = common.GenerateSecret()
+
+	s.ShortID.Alphabet = "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	s.ShortID.Length = 6
+	s.ShortID.TTL = ttl
+	s.ShortID.MaxRequests = maxr
+	s.ShortID.ExpireOn = expire
+
+	s.Tuning.StatsEventsWorkerNum = 20
+
+	settings.Validate()
+	return
 }
 
 func TestGenerateID(t *testing.T) {
@@ -121,14 +106,14 @@ func TestGenerateID(t *testing.T) {
 		{"abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 30, "[iIl1o0O]"},
 	}
 	for _, tt := range tests {
-		Config = ConfigSchema{
+		s := ConfigSchema{
 			ShortID: ShortIDConfig{
 				Alphabet: tt.Alphabet,
 				Length:   tt.Length,
 			},
 		}
 		t.Run(tt.Alphabet, func(t *testing.T) {
-			gotShortID := generateID()
+			gotShortID := generateID(&s.ShortID)
 			if len(gotShortID) != tt.Length {
 				t.Errorf("GenerateID() = %v, len = %v, want %v", gotShortID, len(gotShortID), tt.Length)
 			}
@@ -141,8 +126,8 @@ func TestGenerateID(t *testing.T) {
 }
 
 func TestUpsertURLQuick(t *testing.T) {
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
-	NewSession()
+	s := buildConfigTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	NewSession(s)
 	defer CloseSession()
 	// test urls
 	tests := []string{
@@ -376,14 +361,14 @@ func TestUpsertURL(t *testing.T) {
 			},
 		},
 	}
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
-	NewSession()
+	s := buildConfigTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	NewSession(s)
 	defer CloseSession()
 	ids := make(map[string]bool)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := UpsertURL(tt.url, tt.args.forceAlphabet, tt.args.forceLength, time.Now())
-			mlog.Info("upsert url %v, %v", id, err)
+			log.Infof("upsert url %v, %v", id, err)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpsertURL() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -431,9 +416,9 @@ func TestDeleteURL(t *testing.T) {
 			url:     nil,
 		},
 	}
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	s := buildConfigTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
 
-	NewSession()
+	NewSession(s)
 	defer CloseSession()
 	for _, tt := range tests {
 		var id string
@@ -492,8 +477,8 @@ func TestGetURL(t *testing.T) {
 			wantURL: "https://ilij.li/?param=4",
 		},
 	}
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
-	NewSession()
+	s := buildConfigTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	NewSession(s)
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -581,8 +566,8 @@ func TestExpireRequestsUrl(t *testing.T) {
 		},
 	}
 	var zeroTime time.Time
-	buildConifgTestExpireParams(0, 20, zeroTime)
-	NewSession()
+	cfg := buildConfigTestExpireParams(0, 20, zeroTime)
+	NewSession(cfg)
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -656,20 +641,20 @@ func TestExpireTTLUrl(t *testing.T) {
 		},
 	}
 	var zeroTime time.Time
-	buildConifgTestExpireParams(0, 0, zeroTime)
-	NewSession()
+	c := buildConfigTestExpireParams(0, 0, zeroTime)
+	NewSession(c)
 	defer CloseSession()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, _ := UpsertURL(&tt.param, true, true, time.Now())
-			//mlog.Info("-- upsert %s --", id)
+			//log.Info("-- upsert %s --", id)
 			// consume all the requests
 			time.Sleep(time.Duration(tt.wait) * time.Second)
 			now := time.Now()
 			_, err := GetURLRedirect(id)
 			u, _ := GetURLInfo(id)
 			fmt.Println(tt.name, tt.wantErr, "\nbat", u.BountAt, "\nexp", u.ExpireOn, "\nnow", now.UTC(), "\ndif", now.Sub(u.BountAt))
-			//mlog.Info("-- << end  %s --", id)
+			//log.Info("-- << end  %s --", id)
 			// this should be a not found now for the expired
 			hasErr := (err != nil)
 			if tt.wantErr != hasErr {
@@ -687,9 +672,9 @@ func TestExpireTTLUrl(t *testing.T) {
 }
 
 func BenchmarkSession(b *testing.B) {
-	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	c := buildConfigTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
 
-	NewSession()
+	NewSession(c)
 	defer CloseSession()
 
 	numIds := 10000 // means 10000
@@ -754,8 +739,8 @@ func TestImportCSV(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		buildConifgTest()
-		NewSession()
+		c := buildConfigTest()
+		NewSession(c)
 		t.Run(tt.name, func(t *testing.T) {
 			gotRows, err := ImportCSV(tt.args.inFile)
 			if (err != nil) != tt.wantErr {
@@ -804,8 +789,8 @@ func TestBackupRestore(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		buildConifgTest()
-		NewSession()
+		c := buildConfigTest()
+		NewSession(c)
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < tt.wantRows; i++ {
 				UpsertURLSimple(&URLReq{URL: fmt.Sprintf("http://ex.com/v=%d", i)})

@@ -3,19 +3,25 @@ package web
 
 import (
 	"crypto/subtle"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/jbrodriguez/mlog"
 	"github.com/noandrea/distill/urlstore"
-	"log"
-	"net/http"
-	"time"
+)
+
+var (
+	settings urlstore.ConfigSchema
 )
 
 // RegisterEndpoints register application endpoints
-func RegisterEndpoints() (router *chi.Mux) {
+func RegisterEndpoints(cfg urlstore.ConfigSchema) (router *chi.Mux) {
 	router = chi.NewRouter()
+	settings = cfg
 
 	// A good base middleware stack
 	router.Use(middleware.RequestID)
@@ -36,7 +42,7 @@ func RegisterEndpoints() (router *chi.Mux) {
 	router.Get("/health-check", healthCheckHandler)
 	// redirect root to the configured url
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, urlstore.Config.ShortID.RootRedirectURL, 302)
+		http.Redirect(w, r, settings.ShortID.RootRedirectURL, 302)
 	})
 	// shortener redirect
 	router.Get("/{ID}", handleGetURL)
@@ -210,8 +216,8 @@ type ErrResponse struct {
 // apiContext verify the api key header
 func apiContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiKey := r.Header.Get(urlstore.Config.Tuning.APIKeyHeaderName)
-		keyMatch := subtle.ConstantTimeCompare([]byte(apiKey), []byte(urlstore.Config.Server.APIKey))
+		apiKey := r.Header.Get(settings.Tuning.APIKeyHeaderName)
+		keyMatch := subtle.ConstantTimeCompare([]byte(apiKey), []byte(settings.Server.APIKey))
 		if keyMatch == 0 {
 			http.Error(w, http.StatusText(403), 403)
 			return

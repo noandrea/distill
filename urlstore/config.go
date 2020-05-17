@@ -2,13 +2,11 @@ package urlstore
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/noandrea/distill/pkg/common"
 	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
 )
 
 // ServerConfig configuration for the server
@@ -45,9 +43,10 @@ type TuningConfig struct {
 
 // ConfigSchema define the configuration object
 type ConfigSchema struct {
-	Server  ServerConfig  `yaml:"server" mapstructure:"server"`
-	ShortID ShortIDConfig `yaml:"short_id" mapstructure:"short_id"`
-	Tuning  TuningConfig  `yaml:"tuning" mapstructure:"tuning"`
+	Server         ServerConfig  `yaml:"server" mapstructure:"server"`
+	ShortID        ShortIDConfig `yaml:"short_id" mapstructure:"short_id"`
+	Tuning         TuningConfig  `yaml:"tuning" mapstructure:"tuning"`
+	RuntimeVersion string        `yaml:"-" mapstructure:"-"`
 }
 
 func empty(s string) bool {
@@ -61,8 +60,8 @@ func Defaults() {
 	viper.SetDefault("server.port", 1804)
 	viper.SetDefault("server.db_path", "distill.db")
 	// for short id
-	viper.SetDefault("short_id.root_redirect_url", "https://github.com/noandrea/distill/wikis/welcome")
-	viper.SetDefault("short_id.expired_redirect_url", "https://github.com/noandrea/distill/wikis/Expired-URL")
+	viper.SetDefault("short_id.root_redirect_url", "https://discover.distill.plus")
+	viper.SetDefault("short_id.expired_redirect_url", "https://discover.distill.plus")
 	viper.SetDefault("short_id.alphabet", "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
 	viper.SetDefault("short_id.length", 6)
 	// for tuning
@@ -75,32 +74,6 @@ func Defaults() {
 	viper.SetDefault("tuning.url_cache_size", 2048)
 	viper.SetDefault("tuning.bck_csv_iter_prefetch_size", 2048)
 	viper.SetDefault("tuning.api_key_header_name", "X-API-KEY")
-}
-
-//Defaults generate configuration defaults
-func (c *ConfigSchema) Defaults() {
-	// for server
-	common.DefaultIfEmptyStr(&c.Server.Host, "0.0.0.0")
-	common.DefaultIfEmptyInt(&c.Server.Port, 1804)
-	common.DefaultIfEmptyStr(&c.Server.DbPath, "distill.db")
-
-	// for short id
-	common.DefaultIfEmptyStr(&c.ShortID.RootRedirectURL, "https://discover.distill.plus")
-	common.DefaultIfEmptyStr(&c.ShortID.ExpiredRedirectURL, "https://discover.distill.plus")
-	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679")
-	common.DefaultIfEmptyInt(&c.ShortID.Length, 6)
-
-	// For tuning
-	common.DefaultIfEmptyInt(&c.Tuning.StatsEventsWorkerNum, 1)
-	common.DefaultIfEmptyInt(&c.Tuning.StatsCacheSize, 1024)
-	common.DefaultIfEmptyUint64(&c.Tuning.DbPurgeWritesCount, 2000)
-	common.DefaultIfEmptyUint64(&c.Tuning.DbGCDeletesCount, 500)
-	if c.Tuning.DbGCDiscardRation <= 0 || c.Tuning.DbGCDiscardRation > 1 {
-		c.Tuning.DbGCDiscardRation = 0.5
-	}
-	common.DefaultIfEmptyInt(&c.Tuning.URLCacheSize, 2048)
-	common.DefaultIfEmptyInt(&c.Tuning.BckCSVIterPrefetchSize, 2048)
-	common.DefaultIfEmptyStr(&c.Tuning.APIKeyHeaderName, "X-API-KEY")
 }
 
 //Validate configuration
@@ -121,25 +94,4 @@ func (c *ConfigSchema) Validate() {
 	if c.Tuning.DbGCDiscardRation <= 0 || c.Tuning.DbGCDiscardRation > 1 {
 		panic(fmt.Sprint("tuning.db_gc_discard_ration must be > 0 and < 1"))
 	}
-}
-
-// Config system configuration
-var Config ConfigSchema
-
-// GenerateDefaultConfig generate a default configuration file an writes it in the outFile
-func GenerateDefaultConfig(outFile, version string) {
-	Config.Defaults()
-	Config.Server.APIKey = common.GenerateSecret()
-	b, _ := yaml.Marshal(Config)
-	data := strings.Join([]string{
-		"#",
-		fmt.Sprintf("# Default configuration for Distill v%s", version),
-		"# http://github.com/noandrea/distill",
-		"#\n",
-		fmt.Sprintf("%s", b),
-		"#",
-		"# Config end",
-		"#",
-	}, "\n")
-	ioutil.WriteFile(outFile, []byte(data), 0600)
 }
