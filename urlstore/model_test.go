@@ -39,7 +39,7 @@ func Test_key(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
 
-			if gotK := key(tt.prefix, tt.id); tt.match != reflect.DeepEqual(gotK, tt.wantK) {
+			if gotK, _ := key(tt.prefix, tt.id); tt.match != reflect.DeepEqual(gotK, tt.wantK) {
 				t.Errorf("key() = %v, want %v", gotK, tt.wantK)
 			}
 		})
@@ -74,7 +74,7 @@ func Test_keyUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
-			if gotK := keyURL(tt.id); tt.match != reflect.DeepEqual(gotK, tt.wantK) {
+			if gotK, _ := keyURL(tt.id); tt.match != reflect.DeepEqual(gotK, tt.wantK) {
 				t.Errorf("key() = %v, want %v", gotK, tt.wantK)
 			}
 		})

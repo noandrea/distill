@@ -1,12 +1,12 @@
 GOFILES = $(shell find . -name '*.go' -not -path './vendor/*')
 GOPACKAGES = $(shell go list ./...  | grep -v /vendor/)
-GIT_DESCR = $(shell git describe --always) 
+GIT_DESCR = $(shell git describe --tags --always) 
 # build output folder
 OUTPUTFOLDER = dist
 # docker image
 DOCKER_REGISTRY = noandrea
 DOCKER_IMAGE = distill
-DOCKER_TAG = $(shell git describe --always)
+DOCKER_TAG = $(shell git describe --tags --always)
 # build parameters
 OS = linux
 ARCH = amd64
@@ -24,7 +24,7 @@ build: build-dist
 
 build-dist: $(GOFILES)
 	@echo build binary to $(OUTPUTFOLDER)
-	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags "-X main.Version=$(GIT_DESCR)" -o $(OUTPUTFOLDER)/distill .
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags "-s -w -extldflags \"-static\" -X main.Version=$(GIT_DESCR)" -o $(OUTPUTFOLDER)/distill .
 	@echo copy resources
 	cp -r README.md LICENSE configs $(OUTPUTFOLDER)
 	@echo done
@@ -53,16 +53,14 @@ clean:
 
 docker: docker-build
 
-docker-build: build-dist
-	@echo copy resources
-	@cp configs/settings.docker.yaml $(OUTPUTFOLDER)/settings.yaml
+docker-build:
 	@echo build image
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f ./build/docker/Dockerfile .
+	docker build -t $(DOCKER_IMAGE) -f ./build/docker/Dockerfile .
 	@echo done
 
 docker-push: docker-build
 	@echo push image
-	docker tag $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_IMAGE):latest
+	docker tag $(DOCKER_IMAGE) $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)
 	docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)
 	@echo done
 
@@ -72,5 +70,27 @@ docker-run:
 debug-start:
 	@go run main.go -c examples/settings.yaml --debug start
 
-gen-secret:
-	@< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c40
+changelog:
+	git-chglog --output CHANGELOG.md
+
+git-release:
+	@echo making release
+	git tag $(GIT_DESCR)
+	git-chglog --output CHANGELOG.md
+	git tag $(GIT_DESCR) --delete
+	git add CHANGELOG.md && git commit -m "v$(GIT_DESCR)" -m "Changelog: https://github.com/noandrea/distill/blob/master/CHANGELOG.md"
+	git tag $(GIT_DESCR)
+	git push --tags
+	@echo release complete
+
+_release-patch:
+	$(eval GIT_DESCR = $(shell git describe --tags | awk -F '("|")' '{ print($$1)}' | awk -F. '{$$NF = $$NF + 1;} 1' | sed 's/ /./g'))
+release-patch: _release-patch git-release
+
+_release-minor:
+	$(eval GIT_DESCR = $(shell git describe --tags | awk -F '("|")' '{ print($$1)}' | awk -F. '{$$(NF-1) = $$(NF-1) + 1;} 1' | sed 's/ /./g' | awk -F. '{$$(NF) = 0;} 1' | sed 's/ /./g'))
+release-minor: _release-minor git-release
+
+_release-major:
+	$(eval GIT_DESCR = $(shell git describe --tags | awk -F '("|")' '{ print($$1)}' | awk -F. '{$$(NF-2) = $$(NF-2) + 1;} 1' | sed 's/ /./g' | awk -F. '{$$(NF-1) = 0;} 1' | sed 's/ /./g' | awk -F. '{$$(NF) = 0;} 1' | sed 's/ /./g' ))
+release-major: _release-major git-release 

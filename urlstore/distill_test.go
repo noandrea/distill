@@ -13,6 +13,7 @@ import (
 	"github.com/noandrea/distill/pkg/common"
 
 	"github.com/jbrodriguez/mlog"
+	"github.com/stretchr/testify/require"
 )
 
 func setupLog() {
@@ -139,6 +140,121 @@ func TestGenerateID(t *testing.T) {
 	}
 }
 
+func TestUpsertURLQuick(t *testing.T) {
+	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
+	NewSession()
+	defer CloseSession()
+	// test urls
+	tests := []string{
+		"https://battle.example.com/approval/arm.aspx",
+		"http://example.com/",
+		"https://www.example.com/advertisement/beginner.htm",
+		"http://example.com/",
+		"https://example.com/?achiever=book",
+		"https://www.example.com/?act=birds&bells=believe#boat",
+		"https://www.example.com/",
+		"https://example.com/birthday",
+		"http://www.example.com/alarm",
+		"http://example.com/",
+		"http://example.com/airplane",
+		"http://example.com/?brick=baby",
+		"https://www.example.com/boot/brick",
+		"http://www.example.com/afternoon?bomb=back",
+		"http://www.example.com/airport/badge",
+		"http://example.net/aunt/argument.htm?apparatus=beef",
+		"https://www.example.com/boy",
+		"https://www.example.com/",
+		"https://activity.example.org/breath.aspx",
+		"https://behavior.example.com/birthday/army",
+		"http://www.example.com/boy?basketball=account",
+		"http://www.example.com/",
+		"https://art.example.edu/authority",
+		"https://belief.example.com/believe/bubble.html#acoustics",
+		"https://www.example.com/animal/bike.php?bedroom=beef&authority=airplane",
+		"https://www.example.com/amusement.html#bomb",
+		"http://example.net/arithmetic.aspx",
+		"https://example.com/bear",
+		"https://example.com/",
+		"http://www.example.com/",
+		"https://www.example.com/action/bike.php",
+		"http://www.example.com/adjustment.php",
+		"https://board.example.org/?art=addition",
+		"https://www.example.com/bells/bikes#believe",
+		"https://www.example.net/belief.php",
+		"https://example.net/behavior/basin.php",
+		"https://www.example.com/baby",
+		"https://back.example.com/acoustics#advertisement",
+		"https://example.com/#bells",
+		"http://afterthought.example.com/boot/acoustics",
+		"http://example.com/bath",
+		"https://example.net/",
+		"http://example.edu/",
+		"http://example.com/?boy=bat&advertisement=bag",
+		"http://www.example.com/action/brick",
+		"http://www.example.com/",
+		"http://www.example.org/",
+		"https://example.com/battle/brick",
+		"http://www.example.net/acoustics",
+		"https://www.example.com/agreement.html",
+		"http://www.example.com/acoustics.html",
+		"http://www.example.net/account/bait.html?believe=bag",
+		"https://blow.example.net/",
+		"http://example.com/?action=angle&beef=approval",
+		"http://example.com/amount/airport#account",
+		"https://www.example.com/basketball",
+		"http://example.com/",
+		"http://www.example.com/branch/bear",
+		"https://bed.example.net/",
+		"http://www.example.com/",
+		"https://art.example.com/",
+		"http://example.com/authority/books.php",
+		"http://acoustics.example.org/amusement",
+		"http://www.example.org/acoustics.aspx",
+		"http://example.edu/?bath=bomb&basket=apparel",
+		"http://www.example.com/",
+		"http://example.com/behavior/arithmetic",
+		"https://www.example.com/account.aspx",
+		"https://bottle.example.com/bed.html",
+		"http://example.net/brother.php",
+		"http://www.example.com/brick/belief?angle=air&beef=birthday",
+		"http://example.org/",
+		"https://example.org/boot/belief",
+		"https://www.example.com/",
+		"http://example.com/ants/belief?boat=bike&ball=bell",
+		"http://example.com/baseball.php",
+		"https://alarm.example.com/brake",
+		"http://example.com/believe/blade",
+		"http://www.example.edu/",
+		"https://example.edu/",
+		"http://example.com/basin.htm?bead=afterthought",
+		"http://www.example.com/animal.htm#bed",
+		"https://example.com/?badge=bell&activity=believe",
+		"http://www.example.com/?bedroom=bit&birth=blade",
+		"https://example.com/",
+		"https://www.example.com/bell/account",
+		"http://www.example.com/",
+		"http://bridge.example.com/attack.php?appliance=bed&aftermath=adjustment",
+		"https://www.example.com/",
+		"http://www.example.com/",
+		"http://www.example.com/",
+		"http://example.com/beginner/bridge.aspx",
+		"http://bike.example.com/bait",
+		"https://www.example.com/",
+		"http://example.org/",
+		"https://example.net/balance/action.php",
+		"http://www.example.com/brother/base.aspx?agreement=bear",
+		"http://bed.example.org/acoustics#ball",
+		"http://example.com/",
+		"http://www.example.com/",
+	}
+	// test random urls
+	for _, u := range tests {
+		urlrq := &URLReq{URL: u}
+		_, err := UpsertURL(urlrq, false, false, time.Now())
+		require.NoError(t, err)
+	}
+}
+
 func TestUpsertURL(t *testing.T) {
 	type args struct {
 		forceAlphabet bool
@@ -152,7 +268,7 @@ func TestUpsertURL(t *testing.T) {
 	}{
 		{
 			name:    "invalid url",
-			wantErr: true,
+			wantErr: false,
 			url: &URLReq{
 				URL: "ilij.li",
 			},
@@ -278,7 +394,7 @@ func TestUpsertURL(t *testing.T) {
 		})
 	}
 
-	validElements := 4
+	validElements := 5
 	if len(ids) != validElements {
 		t.Errorf("UpsertURL() length = %v, want %v", len(ids), validElements)
 	}
@@ -309,23 +425,20 @@ func TestDeleteURL(t *testing.T) {
 				URL: "https://ilij.li",
 			},
 		},
+		{
+			name:    "does not exists",
+			wantErr: true,
+			url:     nil,
+		},
 	}
 	buildConifgTestShortIDParams("abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6)
 
 	NewSession()
 	defer CloseSession()
 	for _, tt := range tests {
-		url := tt.url
-		id, _ := UpsertURL(url, false, false, time.Now())
-		for i := 0; i < 1; i++ {
-			GetURLRedirect(id)
-		}
-		ui, _ := GetURLInfo(id)
-		mlog.Trace("%#v", ui)
-
-		if id != ui.ID || url.URL != ui.URL {
-			t.Errorf("DeleteURL()")
-			break
+		var id string
+		if tt.url != nil {
+			id, _ = UpsertURL(tt.url, false, false, time.Now())
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -334,9 +447,10 @@ func TestDeleteURL(t *testing.T) {
 			}
 		})
 
-		ui, err := GetURLInfo(id)
-		if err == nil {
-			t.Errorf("DeleteURL() not deleted")
+		if tt.url != nil {
+			if _, err := GetURLInfo(id); err == nil {
+				t.Errorf("DeleteURL() not deleted")
+			}
 		}
 	}
 

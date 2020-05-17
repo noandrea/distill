@@ -4,6 +4,8 @@ Another url shortener
 
 [![Build Status](https://travis-ci.com/noandrea/distill.svg?branch=master)](https://travis-ci.com/noandrea/distill) [![codecov](https://codecov.io/gh/noandrea/distill/branch/master/graph/badge.svg)](https://codecov.io/gh/noandrea/distill) [![GoDoc](https://godoc.org/github.com/noandrea/distill?status.svg)](https://godoc.org/github.com/noandrea/distill) [![Go Report Card](https://goreportcard.com/badge/github.com/noandrea/distill)](https://goreportcard.com/report/github.com/noandrea/distill)
 
+[![Docker](https://img.shields.io/badge/docker-noandrea/distill-blue)]
+
 ## Motivations
 
 Existing url shorteners are not suitable for a private deploy use or are too complex in terms of requirements.
@@ -177,3 +179,41 @@ To generate an API Token randomly use the `make gen-secret` (linux/mac only):
 make gen-secret 
 WiYS8DauSwVIMeNGIp63ScmY-pgA1ECA7ai7Oce7
 ```
+## Installation 
+
+Distill is distributed via different channels
+
+### Docker
+
+Distill is available on [docker hub](https://hub.docker.com/r/noandrea/distill), 
+as for the images:
+- `latest` tag is built from the [`develop`](https://github.com/noandrea/distill/tree/develop) git branch and contains the latest changes
+- tags in the form `x.y.z` are built from [git tags](https://github.com/noandrea/distill/releases) and are considered stable
+
+to run distill in docker use the following command:
+
+```
+docker run -p 1804:1804 noandrea/distill 
+```
+
+the default configuration for the docker image is available 
+- [here](https://github.com/noandrea/distill/blob/master/configs/settings.docker.yaml) for stable releases
+- [here](https://github.com/noandrea/distill/blob/develop/configs/settings.docker.yaml) for `latest` releases
+
+#### Mount points
+
+To override the configuration mount a volume in `/settings.docker.yaml` path.
+For the data folder the mount point is `/data`.
+
+#### Docker Compose
+
+A [`docker-compose`](https://docs.docker.com/compose/) example is available in the [`examples/docker`](https://github.com/noandrea/distill/blob/master/examples/docker)
+
+### Systemd 
+
+Distill can be run via `systemd`, check the [example](https://github.com/noandrea/distill/blob/master/examples/systemd) configuration.
+
+
+
+
+

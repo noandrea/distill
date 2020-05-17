@@ -1,0 +1,75 @@
+---
+# Persistent volume
+# Create a persistent volume to store the database
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: distill-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: gp2
+
+---
+# Deployment
+# this is distill, since it uses an embedded db
+# it cant really scale behind 1 replica
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: distill
+  name: distill
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: distill
+  template:
+    metadata:
+      labels:
+        app: distill
+    spec:
+      containers:
+      - env:
+        # this is an example, a better alternative would be to use 
+        # a k8s secret or config map
+        - name: DISTILL_SERVER_API_KEY
+          value: theapikeytouse
+        image: noandrea/distill
+        imagePullPolicy: Always
+        name: distill
+        ports:
+        - name: http
+          containerPort: 1804
+        # persist the db file on a persistent volume
+        volumeMounts:
+        - name: distill-data
+          mountPath: /data
+      volumes:
+      - name: distill-data
+        persistentVolumeClaim:
+          claimName: distill-data-pvc
+
+
+---
+# Service 
+# the service for the above deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: distill-service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: distill
+

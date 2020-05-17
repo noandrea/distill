@@ -18,13 +18,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/noandrea/distill/urlstore"
 
 	"github.com/jbrodriguez/mlog"
+	"github.com/noandrea/distill/pkg/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/noandrea/distill/pkg/common"
 )
 
 var cfgFile, logFile, version string
@@ -83,7 +84,10 @@ func initConfig() {
 	viper.AddConfigPath("/etc/distill") // adding home directory as first search path
 	viper.AddConfigPath("./configs")
 	viper.AddConfigPath(".")
+	viper.SetEnvPrefix("DISTILL")
 	viper.AutomaticEnv() // read in environment variables that match
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	urlstore.Defaults() // load defaults for configuration
 	// if there is the config file read it
 	if len(cfgFile) > 0 { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
@@ -93,7 +97,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		mlog.Info("Using config file: %v", viper.ConfigFileUsed())
 		viper.Unmarshal(&urlstore.Config)
-		urlstore.Config.Defaults()
 		urlstore.Config.Validate()
 	} else {
 		switch err.(type) {
