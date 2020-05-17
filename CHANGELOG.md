@@ -1,67 +1,49 @@
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
-
+<a name="unreleased"></a>
 ## [Unreleased]
 
-### Added
 
-- Add support for redirect for expired short id (ttl or expiration date)
-- Add support for redirect for exhausted short id (requests limit reached)
+<a name="0.2.2"></a>
+## [0.2.2] - 2020-05-17
+### Build
+- make it more easy to release
+
+### Doc
+- add systemd example ([#11](https://github.com/noandrea/distill/issues/11))
+
+### Feat
+- remove ambiguous chars from default alphabet ([#13](https://github.com/noandrea/distill/issues/13))
+- **cleanup:** Merge pull request [#6](https://github.com/noandrea/distill/issues/6) from noandrea/develop
+- **docker:** lean and self contained docker builds ([#8](https://github.com/noandrea/distill/issues/8))
+
+### Fix
+- accept url with anchors ([#10](https://github.com/noandrea/distill/issues/10))
+
+### Misc
+- tweaks to the k8s deployment settings
 
 
-### Fixed
+<a name="0.2.1"></a>
+## [0.2.1] - 2018-06-26
 
-- Test compilation
+<a name="0.1.0"></a>
+## [0.1.0] - 2018-06-26
 
-## [0.2.0] - 2018-06-26
+<a name="0.0.3-ci"></a>
+## [0.0.3-ci] - 2018-05-14
 
-### Added
-
-- Add restore of backup at start time
-
-### Fixed
-
-- Unmarshalling csv format
-
-## [0.2.0] - 2018-06-26
-
-### Added
-
-- Add restore of backup at start time
-
-### Fixed
-
-- Unmarshalling csv format
-
-## [0.1.0] - 2018-06-25
-
-### Added
-
-- First stable release
-
+<a name="0.0.3"></a>
 ## [0.0.3] - 2018-05-14
 
-### Added
+<a name="0.0.2"></a>
+## [0.0.2] - 2018-05-13
 
-- Changelog
-- Iterator over URLs in urlstore
-- Chi profiling routes
+<a name="0.0.1"></a>
+## 0.0.1 - 2018-05-08
 
-### Fixed
-
-- Global statistics collection
-
-## [0.0.2] - 2018-05-14
-
-### Added
-
-- Timing attack prevention for api key
-- Configurable API key header
-
-## [0.0.1] - 2018-05-01
-
-this is the first release
+[Unreleased]: https://github.com/noandrea/distill/compare/0.2.2...HEAD
+[0.2.2]: https://github.com/noandrea/distill/compare/0.2.1...0.2.2
+[0.2.1]: https://github.com/noandrea/distill/compare/0.1.0...0.2.1
+[0.1.0]: https://github.com/noandrea/distill/compare/0.0.3-ci...0.1.0
+[0.0.3-ci]: https://github.com/noandrea/distill/compare/0.0.3...0.0.3-ci
+[0.0.3]: https://github.com/noandrea/distill/compare/0.0.2...0.0.3
+[0.0.2]: https://github.com/noandrea/distill/compare/0.0.1...0.0.2
