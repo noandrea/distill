@@ -2,6 +2,9 @@
 ## [Unreleased]
 
 
+<a name="0.2.3"></a>
+## [0.2.3] - 2020-05-17
+
 <a name="0.2.2"></a>
 ## [0.2.2] - 2020-05-17
 ### Build
@@ -22,11 +25,11 @@
 - tweaks to the k8s deployment settings
 
 
+<a name="0.1.0"></a>
+## [0.1.0] - 2019-02-08
+
 <a name="0.2.1"></a>
 ## [0.2.1] - 2018-06-26
-
-<a name="0.1.0"></a>
-## [0.1.0] - 2018-06-26
 
 <a name="0.0.3-ci"></a>
 ## [0.0.3-ci] - 2018-05-14
@@ -40,10 +43,11 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2018-05-08
 
-[Unreleased]: https://github.com/noandrea/distill/compare/0.2.2...HEAD
-[0.2.2]: https://github.com/noandrea/distill/compare/0.2.1...0.2.2
-[0.2.1]: https://github.com/noandrea/distill/compare/0.1.0...0.2.1
-[0.1.0]: https://github.com/noandrea/distill/compare/0.0.3-ci...0.1.0
+[Unreleased]: https://github.com/noandrea/distill/compare/0.2.3...HEAD
+[0.2.3]: https://github.com/noandrea/distill/compare/0.2.2...0.2.3
+[0.2.2]: https://github.com/noandrea/distill/compare/0.1.0...0.2.2
+[0.1.0]: https://github.com/noandrea/distill/compare/0.2.1...0.1.0
+[0.2.1]: https://github.com/noandrea/distill/compare/0.0.3-ci...0.2.1
 [0.0.3-ci]: https://github.com/noandrea/distill/compare/0.0.3...0.0.3-ci
 [0.0.3]: https://github.com/noandrea/distill/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/noandrea/distill/compare/0.0.1...0.0.2
