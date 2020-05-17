@@ -85,9 +85,9 @@ func (c *ConfigSchema) Defaults() {
 	common.DefaultIfEmptyStr(&c.Server.DbPath, "distill.db")
 
 	// for short id
-	common.DefaultIfEmptyStr(&c.ShortID.RootRedirectURL, "https://github.com/noandrea/distill/wikis/welcome")
-	common.DefaultIfEmptyStr(&c.ShortID.ExpiredRedirectURL, "https://github.com/noandrea/distill/wikis/Expired-URL")
-	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+	common.DefaultIfEmptyStr(&c.ShortID.RootRedirectURL, "https://discover.distill.plus")
+	common.DefaultIfEmptyStr(&c.ShortID.ExpiredRedirectURL, "https://discover.distill.plus")
+	common.DefaultIfEmptyStr(&c.ShortID.Alphabet, "abcdefghkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679")
 	common.DefaultIfEmptyInt(&c.ShortID.Length, 6)
 
 	// For tuning
