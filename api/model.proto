@@ -1,0 +1,24 @@
+// [START declaration]
+syntax = "proto3";
+package model;
+
+import "google/protobuf/timestamp.proto";
+// [END declaration]
+
+option go_package = ".;model";
+
+// [START messages]
+message URLInfo {
+  string id = 1;
+  string redirectURL = 2;
+  int64 hits = 3;
+  google.protobuf.Timestamp recordedOn = 4;
+  google.protobuf.Timestamp activeFrom = 5;
+  google.protobuf.Timestamp expiresOn = 6;
+  int64 resolveLimit = 7;
+  int64 TTL = 8;
+  string expiredRedirectURL = 9;
+  string exhaustedRedirectURL = 10;
+  string inactiveRedirectURL = 11;
+}
+// [END messages]

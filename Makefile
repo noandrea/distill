@@ -52,6 +52,11 @@ clean:
 	@rm -rf dist
 	@echo done
 
+gen-proto:
+	@echo generate protocolbuffer code 
+	protoc --proto_path=api --go_out=pkg/model api/model.proto
+	@echo done
+
 docker: docker-build
 
 docker-build:
