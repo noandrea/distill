@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/noandrea/distill/urlstore"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

@@ -1,5 +1,4 @@
-// Package urlstore provides the main functionalities for distill
-package urlstore
+package datastore
 
 import (
 	"encoding/csv"
@@ -11,124 +10,75 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
+	"github.com/noandrea/distill/config"
+	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	backupExtBin = ".bin"
-	backupExtCsv = ".csv"
-)
+type EmbedStore struct {
+	db  *badger.DB
+	uc  gcache.Cache
+	st  *model.Statistics
+	stM sync.Mutex
+}
 
-var (
-	// initialize stats keys
-	statsKeyGlobalURLCount = keyGlobalStat("distill_global_url_count")
-	statsKeyGlobalGetCount = keyGlobalStat("distill_global_get_count")
-	statsKeyGlobalDelCount = keyGlobalStat("distill_global_del_count")
-	statsKeyGlobalUpdCount = keyGlobalStat("distill_global_upd_count")
-)
+var store *EmbedStore
 
-var (
-	db       *badger.DB
-	uc       gcache.Cache
-	st       *Statistics
-	stM      sync.Mutex
-	settings ConfigSchema
-)
-
-//NewSession opens the underling storage
-func NewSession(cfg ConfigSchema) {
-	settings = cfg
+//NewEmbedStore opens the underling storage
+func NewEmbedStore(cfg config.DatastoreConfig) *EmbedStore {
+	store = &EmbedStore{}
+	dsSettings := cfg
 	// open the badger database
-	opts := badger.DefaultOptions(settings.Server.DbPath)
+	opts := badger.DefaultOptions(dsSettings.URI)
 	opts.SyncWrites = true
-	// opts.Dir = settings.Server.DbPath TODO: this should not be necessary anymore
-	err := os.MkdirAll(settings.Server.DbPath, os.ModePerm)
+	// opts.Dir = dsSettings.URI TODO: this should not be necessary anymore
+	err := os.MkdirAll(dsSettings.URI, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}
-	opts.ValueDir = settings.Server.DbPath
-	db, err = badger.Open(opts)
+	opts.ValueDir = dsSettings.URI
+	store.db, err = badger.Open(opts)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// initialize internal cache
-	uc = gcache.New(settings.Tuning.URLCacheSize).
+	store.uc = gcache.New(settings.Tuning.URLCacheSize).
 		EvictedFunc(whenRemoved).
 		PurgeVisitorFunc(whenRemoved).
 		ARC().
 		Build()
 	// initialize statistics
-	err = LoadStats()
+	err = store.LoadStats()
 	if err != nil {
 		log.Fatal(err)
 	}
+	return store
 }
 
 // CloseSession closes the underling storage
-func CloseSession() {
-	SaveStats()
-	uc.Purge()
-	db.Close()
-}
-
-// whenRemoved gets called by the memory cache
-// it will check the value, if the value is nil
-// means that the key has been deleted
-// so it will delete it also from the persistent store
-func whenRemoved(key, value interface{}) {
-	if value == nil {
-		Delete(key.(string))
-		return
-	}
-	ui := value.(*URLInfo)
-	Upsert(ui)
-}
-
-// SaveStats write the URL's statistics
-func SaveStats() (err error) {
-	err = db.Update(func(txn *badger.Txn) (err error) {
-		// find all the urls
-		dbSetUint64(txn, statsKeyGlobalURLCount, st.Urls)
-		dbSetUint64(txn, statsKeyGlobalGetCount, st.Gets)
-		dbSetUint64(txn, statsKeyGlobalDelCount, st.Deletes)
-		dbSetUint64(txn, statsKeyGlobalUpdCount, st.Upserts)
-		// update global statistics
-		return
-	})
-	return
-}
-
-// LoadStats write the URL's statistics
-func LoadStats() (err error) {
-	// initialize object
-	st = &Statistics{}
-	err = db.View(func(txn *badger.Txn) (err error) {
-		st.Urls = dbGetUint64(txn, statsKeyGlobalURLCount)
-		st.Gets = dbGetUint64(txn, statsKeyGlobalGetCount)
-		st.Deletes = dbGetUint64(txn, statsKeyGlobalDelCount)
-		st.Upserts = dbGetUint64(txn, statsKeyGlobalUpdCount)
-		return
-	})
-	return
+func (store *EmbedStore) Close() {
+	store.SaveStats()
+	store.uc.Purge()
+	store.db.Close()
 }
 
 // UpdateStats uppdate urls statistics
-func UpdateStats(s Statistics) {
-	stM.Lock()
-	defer stM.Unlock()
-	st.Urls += s.Urls
-	st.Gets += s.Gets
-	st.Deletes += s.Deletes
-	st.Upserts += s.Upserts
-	st.GetsExpired += s.GetsExpired
-	st.LastRequest = s.LastRequest
+func (store *EmbedStore) UpdateStats(s model.Statistics) {
+	store.stM.Lock()
+	defer store.stM.Unlock()
+	store.st.Urls += s.Urls
+	store.st.Gets += s.Gets
+	store.st.Deletes += s.Deletes
+	store.st.Upserts += s.Upserts
+	store.st.GetsExpired += s.GetsExpired
+	store.st.LastRequest = s.LastRequest
 }
 
 // ResetStats reset global statistcs
-func ResetStats() (err error) {
-	stM.Lock()
-	defer stM.Unlock()
-	st = &Statistics{}
+func (store *EmbedStore) ResetStats() (err error) {
+	store.stM.Lock()
+	defer store.stM.Unlock()
+	store.st = &model.Statistics{}
 	// iterate over the urls
 	i := NewURLIterator()
 	for i.HasNext() {
@@ -136,14 +86,14 @@ func ResetStats() (err error) {
 		if err != nil {
 			log.Warning("Warning looping through the URLs")
 		}
-		st.Urls++
-		st.Upserts++
-		st.Gets += u.Counter
+		store.st.Urls++
+		store.st.Upserts++
+		store.st.Gets += u.Counter
 	}
 	// close the iterator
 	i.Close()
 	// run the update
-	err = SaveStats()
+	err = store.SaveStats()
 	if err != nil {
 		log.Warning("Error while rest stats:", err)
 	}
@@ -151,20 +101,20 @@ func ResetStats() (err error) {
 }
 
 // GetStats get the statistics
-func GetStats() (s *Statistics) {
-	return st
+func (store *EmbedStore) GetStats() (s *model.Statistics) {
+	return store.st
 }
 
 // Insert an url into the url store
-func Insert(u *URLInfo) (err error) {
-	err = db.Update(func(txn *badger.Txn) (err error) {
-		u.ID = generateID(&settings.ShortID)
+func (store *EmbedStore) Insert(u *model.URLInfo) (err error) {
+	err = store.db.Update(func(txn *badger.Txn) (err error) {
+		u.ID = generateID(settings.ShortID.Alphabet, settings.ShortID.Length)
 		// generateID always return a valid id
 		key, _ := keyURL(u.ID)
 		// TODO: need another limit (numeber of retries)
 		// TODO: also check the type of error
 		for _, err = dbGet(txn, key); err == nil; {
-			u.ID = generateID(&settings.ShortID)
+			u.ID = generateID(settings.ShortID.Alphabet, settings.ShortID.Length)
 			// generateID always return a valid id
 			key, _ = keyURL(u.ID)
 		}
@@ -175,8 +125,8 @@ func Insert(u *URLInfo) (err error) {
 }
 
 // Upsert an url into the the urlstore
-func Upsert(u *URLInfo) (err error) {
-	err = db.Update(func(txn *badger.Txn) (err error) {
+func (store *EmbedStore) Upsert(u *model.URLInfo) (err error) {
+	err = store.db.Update(func(txn *badger.Txn) (err error) {
 		key, err := keyURL(u.ID)
 		if err != nil {
 			return
@@ -188,12 +138,12 @@ func Upsert(u *URLInfo) (err error) {
 }
 
 // Peek retrive a url without incrementing the counter
-func Peek(id string) (u *URLInfo, err error) {
-	uic, err := uc.Get(id)
+func (store *EmbedStore) Peek(id string) (u *model.URLInfo, err error) {
+	uic, err := store.uc.Get(id)
 	if err == gcache.KeyNotFoundError {
 		log.Trace("cache miss for ", id)
-		err = db.View(func(txn *badger.Txn) (err error) {
-			u = &URLInfo{}
+		err = store.db.View(func(txn *badger.Txn) (err error) {
+			u = &model.URLInfo{}
 			ku, err := keyURL(id)
 			if err != nil {
 				return
@@ -205,28 +155,28 @@ func Peek(id string) (u *URLInfo, err error) {
 			return
 		})
 	} else {
-		u = uic.(*URLInfo)
+		u = uic.(*model.URLInfo)
 	}
 	return
 }
 
 // Get an url from the datastore
-func Get(id string) (u *URLInfo, err error) {
-	u, err = Peek(id)
+func (store *EmbedStore) Get(id string) (u *model.URLInfo, err error) {
+	u, err = store.Peek(id)
 	if err != nil {
 		return
 	}
 	// increase the counter
 	u.Counter++
-	uc.Set(id, u)
+	store.uc.Set(id, u)
 	return
 }
 
 // Delete deletes an url
-func Delete(id string) (err error) {
-	err = db.Update(func(txn *badger.Txn) (err error) {
+func (store *EmbedStore) Delete(id string) (err error) {
+	err = store.db.Update(func(txn *badger.Txn) (err error) {
 		// remove from cache
-		uc.Remove(id)
+		store.uc.Remove(id)
 		// remove from storage
 		key, err := keyURL(id)
 		if err != nil {
@@ -242,7 +192,7 @@ func Delete(id string) (err error) {
 }
 
 // Backup the database as csv
-func Backup(outFile string) (err error) {
+func (store *EmbedStore) Backup(outFile string) (err error) {
 	ext := filepath.Ext(outFile)
 	switch ext {
 	case backupExtBin:
@@ -251,13 +201,13 @@ func Backup(outFile string) (err error) {
 		if err != nil {
 			return err
 		}
-		ts, err := db.Backup(fp, 0)
+		ts, err := store.db.Backup(fp, 0)
 		if err != nil {
 			return err
 		}
 		log.Info("Backup completed at ", ts)
 	case backupExtCsv:
-		err = db.View(func(txn *badger.Txn) (err error) {
+		err = store.db.View(func(txn *badger.Txn) (err error) {
 			// create output file
 			fp, err := os.Create(outFile)
 			if err != nil {
@@ -279,7 +229,7 @@ func Backup(outFile string) (err error) {
 			for it.Seek(p); it.ValidForPrefix(p); it.Next() {
 				// retrieve values
 				err := it.Item().Value(func(v []byte) error {
-					u := &URLInfo{}
+					u := &model.URLInfo{}
 					u.UnmarshalBinary(v)
 					return csvW.Write(u.MarshalRecord())
 				})
@@ -297,7 +247,7 @@ func Backup(outFile string) (err error) {
 }
 
 // Restore the database from a backup file
-func Restore(inFile string) (count int, err error) {
+func (store *EmbedStore) Restore(inFile string) (count int, err error) {
 	ext := filepath.Ext(inFile)
 	switch ext {
 	case backupExtBin:
@@ -305,7 +255,7 @@ func Restore(inFile string) (count int, err error) {
 		if err != nil {
 			return 0, err
 		}
-		db.Load(fp, 16)
+		store.db.Load(fp, 16)
 		fp.Close()
 	case backupExtCsv:
 		fp, err := os.Open(inFile)
@@ -321,11 +271,11 @@ func Restore(inFile string) (count int, err error) {
 			if err != nil {
 				break
 			}
-			u := &URLInfo{}
+			u := &model.URLInfo{}
 			if err = u.UnmarshalRecord(record); err != nil {
 				break
 			}
-			if err = Upsert(u); err != nil {
+			if err = store.Upsert(u); err != nil {
 				break
 			}
 			count++
@@ -365,8 +315,8 @@ func (i *URLIterator) HasNext() bool {
 }
 
 // NextURL get the next URL from the iterator
-func (i *URLIterator) NextURL() (u *URLInfo, err error) {
-	u = &URLInfo{}
+func (i *URLIterator) NextURL() (u *model.URLInfo, err error) {
+	u = &model.URLInfo{}
 	err = i.Iterator.Item().Value(func(v []byte) error {
 		return u.UnmarshalBinary(v)
 	})
@@ -398,7 +348,7 @@ func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
 	}
 }
 
-func dbSetBin(txn *badger.Txn, k []byte, val BinSerializable) (err error) {
+func dbSetBin(txn *badger.Txn, k []byte, val model.BinSerializable) (err error) {
 	binData, err := val.MarshalBinary()
 	if err != nil {
 		return
@@ -436,7 +386,7 @@ func dbGetUint64(txn *badger.Txn, k []byte) (i uint64) {
 	return
 }
 
-func dbGetBin(txn *badger.Txn, k []byte, val BinSerializable) (err error) {
+func dbGetBin(txn *badger.Txn, k []byte, val model.BinSerializable) (err error) {
 	v, err := dbGet(txn, k)
 	if err != nil {
 		return err

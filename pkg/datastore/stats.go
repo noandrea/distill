@@ -1,10 +1,11 @@
-package urlstore
+package datastore
 
 import (
 	"sync"
 	"time"
 
 	"github.com/bluele/gcache"
+	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dgraph-io/badger"
@@ -14,15 +15,15 @@ var (
 	wg               sync.WaitGroup
 	sc               gcache.Cache
 	opEventsQueue    chan *URLOp
-	globalStatistics *Statistics
+	globalStatistics *model.Statistics
 	// sytem keys
 	sysKeyPurgeCount []byte
 	sysKeyGCCount    []byte
 )
 
 // pushEvent in the url operaiton queue
-func pushEvent(urlop *URLOp) {
-	s := Statistics{}
+func pushEvent(urlop *model.URLOp) {
+	s := model.Statistics{}
 	switch urlop.opcode {
 	case opcodeDelete:
 		s.Deletes++
@@ -37,7 +38,7 @@ func pushEvent(urlop *URLOp) {
 		s.LastRequest = time.Now()
 		s.GetsExpired++
 	}
-	UpdateStats(s)
+	ds.UpdateStats(s)
 }
 
 // Process is an implementation of wp.Job.Process()
@@ -73,17 +74,7 @@ var (
 	statsMutex sync.Mutex
 )
 
-func (s *Statistics) record(get, upsert, delete, urls, getExpired int64) {
-	statsMutex.Lock()
-	// this is confusing but actually correct
-	// if the input number is negative will work just the same
-	s.Gets += uint64(get)
-	s.GetsExpired += uint64(getExpired)
-	s.Upserts += uint64(upsert)
-	s.Deletes += uint64(delete)
-	s.Urls += uint64(urls)
-	statsMutex.Unlock()
-}
+
 
 // runDbMaintenance
 var (

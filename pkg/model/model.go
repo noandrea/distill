@@ -1,4 +1,4 @@
-package urlstore
+package model
 
 import (
 	"encoding/binary"
@@ -79,6 +79,18 @@ func (s *Statistics) String() string {
 		s.Deletes,
 		s.GetsExpired,
 	)
+}
+
+func (s *Statistics) record(get, upsert, delete, urls, getExpired int64) {
+	// statsMutex.Lock()
+	// // this is confusing but actually correct
+	// // if the input number is negative will work just the same
+	// s.Gets += uint64(get)
+	// s.GetsExpired += uint64(getExpired)
+	// s.Upserts += uint64(upsert)
+	// s.Deletes += uint64(delete)
+	// s.Urls += uint64(urls)
+	// statsMutex.Unlock()
 }
 
 // ExpirationDate return the expiration date of the URLInfo
@@ -263,37 +275,4 @@ var ErrURLExhausted = fmt.Errorf("url exhausted")
 // ErrInvalidBackupRecord when a csv record from backup is different from expected
 var ErrInvalidBackupRecord = fmt.Errorf("Invalid backup record")
 
-//   ___  ____   ________  ____  ____   ______
-//  |_  ||_  _| |_   __  ||_  _||_  _|.' ____ \
-//    | |_/ /     | |_ \_|  \ \  / /  | (___ \_|
-//    |  __'.     |  _| _    \ \/ /    _.____`.
-//   _| |  \ \_  _| |__/ |   _|  |_   | \____) |
-//  |____||____||________|  |______|   \______.'
-//
 
-func keyURL(id string) (k []byte, err error) {
-	return key(keyURLPrefix, id)
-}
-
-func keySys(id string) (k []byte) {
-	k, _ = key(keySysPrefix, id)
-	return
-}
-
-func keyGlobalStat(id string) (k []byte) {
-	k, _ = key(keyStatPrefix, id)
-	return
-}
-
-func key(prefix byte, id string) (k []byte, err error) {
-	idb := []byte(id)
-	idbl := len(idb)
-	if idbl == 0 {
-		err = fmt.Errorf("Empty id not allowed")
-		return
-	}
-	k = make([]byte, len(idb)+1)
-	k[0] = prefix
-	copy(k[1:], idb)
-	return
-}

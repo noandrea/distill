@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/noandrea/distill/urlstore"
+	"github.com/noandrea/distill/config"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -16,7 +16,7 @@ var cfgFile, logFile string
 var profile, debug bool
 
 // Config system configuration
-var settings urlstore.ConfigSchema
+var settings config.Schema
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

@@ -1,4 +1,4 @@
-package urlstore
+package config
 
 import (
 	"fmt"
@@ -14,7 +14,12 @@ type ServerConfig struct {
 	APIKey string `yaml:"api_key" mapstructure:"api_key"`
 	Host   string `yaml:"host" mapstructure:"host"`
 	Port   int    `yaml:"port" mapstructure:"port"`
-	DbPath string `yaml:"db_path" mapstructure:"db_path"`
+}
+
+// DatastoreConfig configure the datastore
+type DatastoreConfig struct {
+	Name string `yaml:"name" mapstructure:"name"`
+	URI  string `yaml:"uri" mapstructure:"uri"`
 }
 
 //ShortIDConfig configuration for the short id
@@ -41,12 +46,13 @@ type TuningConfig struct {
 	APIKeyHeaderName       string  `yaml:"api_key_header_name" mapstructure:"api_key_header_name"`
 }
 
-// ConfigSchema define the configuration object
-type ConfigSchema struct {
-	Server         ServerConfig  `yaml:"server" mapstructure:"server"`
-	ShortID        ShortIDConfig `yaml:"short_id" mapstructure:"short_id"`
-	Tuning         TuningConfig  `yaml:"tuning" mapstructure:"tuning"`
-	RuntimeVersion string        `yaml:"-" mapstructure:"-"`
+// Schema define the configuration object
+type Schema struct {
+	Server         ServerConfig    `yaml:"server" mapstructure:"server"`
+	Datastore      DatastoreConfig `yaml:"datastore" mapstructure:"datastore"`
+	ShortID        ShortIDConfig   `yaml:"short_id" mapstructure:"short_id"`
+	Tuning         TuningConfig    `yaml:"tuning" mapstructure:"tuning"`
+	RuntimeVersion string          `yaml:"-" mapstructure:"-"`
 }
 
 func empty(s string) bool {
@@ -58,7 +64,9 @@ func Defaults() {
 	// for server
 	viper.SetDefault("server.host", "0.0.0.0")
 	viper.SetDefault("server.port", 1804)
-	viper.SetDefault("server.db_path", "distill.db")
+	// datastore
+	viper.SetDefault("datastore.name", "embed")
+	viper.SetDefault("datastore.uri", "distill.db")
 	// for short id
 	viper.SetDefault("short_id.root_redirect_url", "https://discover.distill.plus")
 	viper.SetDefault("short_id.expired_redirect_url", "https://discover.distill.plus")
@@ -77,7 +85,7 @@ func Defaults() {
 }
 
 //Validate configuration
-func (c *ConfigSchema) Validate() {
+func (c *Schema) Validate() {
 
 	if common.IsEmptyStr(c.Server.APIKey) {
 		panic("server.api_key cannot be empty")

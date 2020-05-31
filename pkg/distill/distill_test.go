@@ -1,4 +1,4 @@
-package urlstore
+package distill
 
 import (
 	"fmt"
@@ -113,7 +113,7 @@ func TestGenerateID(t *testing.T) {
 			},
 		}
 		t.Run(tt.Alphabet, func(t *testing.T) {
-			gotShortID := generateID(&s.ShortID)
+			gotShortID := generateID(s.ShortID.Alphabet, s.ShortID.Length)
 			if len(gotShortID) != tt.Length {
 				t.Errorf("GenerateID() = %v, len = %v, want %v", gotShortID, len(gotShortID), tt.Length)
 			}

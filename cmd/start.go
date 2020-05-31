@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/noandrea/distill/urlstore"
+	"github.com/noandrea/distill/pkg/distill"
 	"github.com/noandrea/distill/web"
 
 	log "github.com/sirupsen/logrus"
@@ -47,9 +47,9 @@ func start(cmd *cobra.Command, args []string) {
 	log.Info("")
 	log.Infof("Listening to %v:%v", settings.Server.Host, settings.Server.Port)
 
-	urlstore.NewSession(settings)
+	distill.NewSession(settings)
 	if len(strings.TrimSpace(restoreFile)) > 0 {
-		count, err := urlstore.Restore(restoreFile)
+		count, err := distill.Restore(restoreFile)
 		if err != nil {
 			log.Fatalf("Error restoring URLs from %s: %v ", restoreFile, err)
 		}

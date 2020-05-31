@@ -1,4 +1,4 @@
-package urlstore
+package model
 
 import (
 	"reflect"

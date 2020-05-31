@@ -11,15 +11,17 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/jbrodriguez/mlog"
-	"github.com/noandrea/distill/urlstore"
+	"github.com/noandrea/distill/config"
+	"github.com/noandrea/distill/pkg/distill"
+	"github.com/noandrea/distill/pkg/model"
 )
 
 var (
-	settings urlstore.ConfigSchema
+	settings config.Schema
 )
 
 // RegisterEndpoints register application endpoints
-func RegisterEndpoints(cfg urlstore.ConfigSchema) (router *chi.Mux) {
+func RegisterEndpoints(cfg config.Schema) (router *chi.Mux) {
 	router = chi.NewRouter()
 	settings = cfg
 
@@ -74,7 +76,7 @@ func RegisterEndpoints(cfg urlstore.ConfigSchema) (router *chi.Mux) {
 //
 
 func handleShort(w http.ResponseWriter, r *http.Request) {
-	urlReq := &urlstore.URLReq{}
+	urlReq := &model.URLReq{}
 	if err := render.Bind(r, urlReq); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 		return
@@ -90,7 +92,7 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 		forceLenght = true
 	}
 	// upsert the data
-	id, err := urlstore.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
+	id, err := distill.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
 	mlog.Trace("created %v", id)
 	// TODO: check the actual error
 	if err != nil {

@@ -1,4 +1,4 @@
-package urlstore
+package distill
 
 import (
 	"encoding/csv"
@@ -10,24 +10,35 @@ import (
 	"strings"
 	"time"
 
+	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/common"
+	"github.com/noandrea/distill/pkg/datastore"
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	settings config.Schema
+	ds       datastore.URLDatastore
+)
+
+// NewSession starts a new distill session
+func NewSession(cfg config.Schema, datastore datastore.URLDatastore) {
+	settings = cfg
+	ds = datastore
+}
+
 // generateID generates a new id
 // it is guaranteed that returns an id of at least 1 character
-func generateID(settings *ShortIDConfig) (shortID string) {
-	a := settings.Alphabet
-	l := 1
-	if settings.Length > 1 {
-		l = settings.Length
-	}
+func generateID(alphabet string, length int) (shortID string) {
 	// a and l are validated before
-	shortID, _ = common.RandomString(a, l)
+	shortID, err := common.RandomString(alphabet, length)
+	if err != nil {
+		log.Warn("generateID: error generating IDs", err)
+	}
 	return
 }
 
-// UpsertURLSimple insert or updae an url
+// UpsertURLSimple insert or update an url
 // shortcut for UpsertURL(true, true, time.Now())
 func UpsertURLSimple(url *URLReq) (id string, err error) {
 	return UpsertURL(url, true, true, time.Now())
@@ -80,7 +91,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 	u.ID = strings.TrimSpace(url.ID)
 	// process url id
 	if len(u.ID) == 0 {
-		err = Insert(u)
+		err = ds.Insert(u)
 	} else {
 		// TODO: check longest allowed key in badger
 		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(settings.ShortID.Alphabet))
@@ -93,7 +104,7 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), settings.ShortID.Length)
 			return "", err
 		}
-		err = Upsert(u)
+		err = ds.Upsert(u)
 	}
 
 	if err == nil {
