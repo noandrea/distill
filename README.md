@@ -20,7 +20,7 @@ that can be used for specific events.
 - Load existing short id <-> url mappings\*
 - Overwrite an existing short id with a different target url\*
 - Set a time to live on short ids (globally or per id)
-- Set a expiration date on short ids (globabbly or per id)
+- Set a expiration date on short ids (globally or per id)
 - Set a request limit on short ids (globally or per id)
 - Set a redirect for the `/` path
 - Set a redirect url for exhausted ids (request limit reached)
@@ -36,7 +36,7 @@ that can be used for specific events.
 There are 3 ways to set an expiration for a short id:
 
 - TTL (seconds)
-- Epiration date
+- Expiration date
 - Max requests
 
 The three options can be configured globally or per short id,
@@ -105,7 +105,7 @@ Content-Type: application/json
 }
 ```
 
-Repsonse:
+Response:
 
 ```
 HTTP/1.1 200 OK
@@ -169,7 +169,7 @@ test
 - to generate the Colfer model run
   `colf -b internal Go api/model.colf` from the project root
 
-- to enable coverage badge use `^coverage:\s(\d+(?:\.\d+)?%)` as regexp in gilab configuration
+- to enable coverage badge use `^coverage:\s(\d+(?:\.\d+)?%)` as regexp in gitlab configuration
 
 ## Hints
 
@@ -179,7 +179,8 @@ To generate an API Token randomly use the `make gen-secret` (linux/mac only):
 make gen-secret 
 WiYS8DauSwVIMeNGIp63ScmY-pgA1ECA7ai7Oce7
 ```
-## Installation 
+
+## Installation
 
 Distill is distributed via different channels
 
@@ -187,16 +188,18 @@ Distill is distributed via different channels
 
 Distill is available on [docker hub](https://hub.docker.com/r/noandrea/distill), 
 as for the images:
+
 - `latest` tag is built from the [`develop`](https://github.com/noandrea/distill/tree/develop) git branch and contains the latest changes
 - tags in the form `x.y.z` are built from [git tags](https://github.com/noandrea/distill/releases) and are considered stable
 
 to run distill in docker use the following command:
 
 ```
-docker run -p 1804:1804 noandrea/distill 
+docker run -p 1804:1804 noandrea/distill
 ```
 
-the default configuration for the docker image is available 
+the default configuration for the docker image is available
+
 - [here](https://github.com/noandrea/distill/blob/master/configs/settings.docker.yaml) for stable releases
 - [here](https://github.com/noandrea/distill/blob/develop/configs/settings.docker.yaml) for `latest` releases
 
@@ -209,11 +212,28 @@ For the data folder the mount point is `/data`.
 
 A [`docker-compose`](https://docs.docker.com/compose/) example is available in the [`examples/docker`](https://github.com/noandrea/distill/blob/master/examples/docker)
 
-### Systemd 
+### Systemd
 
 Distill can be run via `systemd`, check the [example](https://github.com/noandrea/distill/blob/master/examples/systemd) configuration.
 
 
+# Structure
 
+the datastore package exposes an interface that has the following
 
+datastore
+  Store(tenant, key, interface{}) err
+  Load(tenant, key, &interface{}) err
+  
+  ConunterPlus(tenant, key) err
+  ConunterMinus(tenant, key) err
+
+  Get(tenant, id) (URLInfo, err)
+  Insert(tenant, URLInfo) err  
+  Upsert(tenant, URLInfo) err
+
+distill
+  deal with settings
+  deal with stats
+  deal with urls 
 
