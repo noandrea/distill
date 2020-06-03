@@ -5,19 +5,7 @@ import (
 
 	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/model"
-)
-
-const (
-	backupExtBin = ".bin"
-	backupExtCsv = ".csv"
-)
-
-var (
-	// initialize stats keys
-	statsKeyGlobalURLCount = keyGlobalStat("distill_global_url_count")
-	statsKeyGlobalGetCount = keyGlobalStat("distill_global_get_count")
-	statsKeyGlobalDelCount = keyGlobalStat("distill_global_del_count")
-	statsKeyGlobalUpdCount = keyGlobalStat("distill_global_upd_count")
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var (
@@ -26,38 +14,23 @@ var (
 
 // URLDatastore implements the datastore for the short urls
 type URLDatastore interface {
-	Close()
-	// for items
-	Insert(u *model.URLInfo) (err error)
-	Upsert(u *model.URLInfo) (err error)
-	Peek(id string) (u *model.URLInfo, err error)
-	Get(id string) (u *model.URLInfo, err error)
-	Delete(id string) (err error)
-	// Backup the database as csv
-	Backup(outFile string) (err error)
-	Restore(inFile string) (count int, err error)
-}
-
-//   ___  ____   ________  ____  ____   ______
-//  |_  ||_  _| |_   __  ||_  _||_  _|.' ____ \
-//    | |_/ /     | |_ \_|  \ \  / /  | (___ \_|
-//    |  __'.     |  _| _    \ \/ /    _.____`.
-//   _| |  \ \_  _| |__/ |   _|  |_   | \____) |
-//  |____||____||________|  |______|   \______.'
-//
-
-func keyURL(id string) (k []byte, err error) {
-	return key(keyURLPrefix, id)
-}
-
-func keySys(id string) (k []byte) {
-	k, _ = key(keySysPrefix, id)
-	return
-}
-
-func keyGlobalStat(id string) (k []byte) {
-	k, _ = key(keyStatPrefix, id)
-	return
+	// for general data
+	Put(key string, data protoreflect.ProtoMessage) error
+	Get(key string, data protoreflect.ProtoMessage) (bool, error)
+	// for counters
+	CounterSet(key string) (err error)
+	CounterGet(key string) (val int, err error)
+	CounterPlus(key string) (err error)
+	CounterMinus(key string) (err error)
+	// for URLs
+	Hit(key string) (model.URLInfo, error)
+	Peek(key string) (model.URLInfo, error)
+	Insert(key string, u *model.URLInfo) error
+	Upsert(key string, u *model.URLInfo) error
+	Delete(key string) error
+	// TODO: Backup the database as csv
+	// Backup(outFile string) error
+	// Restore(inFile string) (int, error)
 }
 
 func key(prefix byte, id string) (k []byte, err error) {

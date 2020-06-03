@@ -7,38 +7,36 @@ import (
 	"github.com/bluele/gcache"
 	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dgraph-io/badger"
 )
 
 var (
 	wg               sync.WaitGroup
 	sc               gcache.Cache
-	opEventsQueue    chan *URLOp
+	opEventsQueue    chan *model.URLOp
 	globalStatistics *model.Statistics
 	// sytem keys
 	sysKeyPurgeCount []byte
 	sysKeyGCCount    []byte
 )
 
-// pushEvent in the url operaiton queue
-func pushEvent(urlop *model.URLOp) {
+// PushEvent in the url operaiton queue
+func PushEvent(urlop *model.URLOp) {
 	s := model.Statistics{}
-	switch urlop.opcode {
-	case opcodeDelete:
+	switch urlop.Opcode {
+	case model.OpcodeDelete:
 		s.Deletes++
 		s.Urls--
-	case opcodeInsert:
+	case model.OpcodeInsert:
 		s.Upserts++
 		s.Urls++
-	case opcodeGet:
+	case model.OpcodeGet:
 		s.LastRequest = time.Now()
 		s.Gets++
-	case opcodeExpired:
+	case model.OpcodeExpired:
 		s.LastRequest = time.Now()
 		s.GetsExpired++
 	}
-	ds.UpdateStats(s)
+	//UpdateStats(s)
 }
 
 // Process is an implementation of wp.Job.Process()
@@ -49,19 +47,22 @@ func processEvents(workerID int) {
 		if !isChannelOpen {
 			break
 		}
-		log.Tracef(">>> Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
-		switch uo.opcode {
-		case opcodeGet:
-			globalStatistics.record(1, 0, 0, 0, 0)
-		case opcodeInsert:
+		log.Tracef(">>> Event pid: %v, opcode:%v  %v", workerID, model.OpcodeToString(uo.Opcode), uo.ID)
+		switch uo.Opcode {
+		case model.OpcodeGet:
+			globalStatistics.Record(1, 0, 0, 0, 0)
+		case model.OpcodeInsert:
 			// TODO: check if existed already
-			globalStatistics.record(0, 1, 0, 1, 0)
-		case opcodeDelete:
-			globalStatistics.record(0, 0, 1, -1, 0)
-		case opcodeExpired:
-			globalStatistics.record(0, 0, 0, 0, 1)
+			globalStatistics.Record(0, 1, 0, 1, 0)
+		case model.OpcodeDelete:
+			globalStatistics.Record(0, 0, 1, -1, 0)
+		case model.OpcodeExpired:
+			globalStatistics.Record(0, 0, 0, 0, 1)
 		}
-		log.Tracef("<<< Event pid: %v, opcode:%v  %v", workerID, opcodeToString(uo.opcode), uo.ID)
+		log.Tracef("<<< Event pid: %v, opcode:%v  %v",
+			workerID,
+			model.OpcodeToString(uo.Opcode),
+			uo.ID)
 	}
 	// complete task
 	log.Tracef("Stop event processor id: %v", workerID)
@@ -73,8 +74,6 @@ func processEvents(workerID int) {
 var (
 	statsMutex sync.Mutex
 )
-
-
 
 // runDbMaintenance
 var (
@@ -99,42 +98,42 @@ func isMaintenanceRunning() bool {
 // runDbMaintenance runs the database maintenance
 // TODO: add tests for this function
 func runDbMaintenance() {
-	if isMaintenanceRunning() {
-		return
-	}
-	setRunMaintenance(true)
-	defer setRunMaintenance(false)
-	wg.Add(1)
-	defer wg.Done()
+	// if isMaintenanceRunning() {
+	// 	return
+	// }
+	// setRunMaintenance(true)
+	// defer setRunMaintenance(false)
+	// wg.Add(1)
+	// defer wg.Done()
 
-	// caluclate if gc is necessary
-	deletes := globalStatistics.Deletes
-	gcLimit := settings.Tuning.DbGCDeletesCount
-	gcCount := uint64(0)
-	// retrieve the gcCount from the db
-	db.View(func(txn *badger.Txn) (err error) {
-		gcCount = dbGetUint64(txn, sysKeyGCCount)
-		return
-	})
+	// // caluclate if gc is necessary
+	// deletes := uint64(globalStatistics.Deletes)
+	// gcLimit := settings.Tuning.DbGCDeletesCount
+	// gcCount := uint64(0)
+	// // retrieve the gcCount from the db
+	// db.View(func(txn *badger.Txn) (err error) {
+	// 	gcCount = dbGetUint64(txn, sysKeyGCCount)
+	// 	return
+	// })
 
-	latestGC := gcCount * gcLimit
-	if latestGC > deletes {
-		// there was a reset should reset in the stats
-		gcCount, latestGC = 0, 0
-	}
+	// latestGC := gcCount * gcLimit
+	// if latestGC > deletes {
+	// 	// there was a reset should reset in the stats
+	// 	gcCount, latestGC = 0, 0
+	// }
 
-	if deletes-latestGC > gcLimit {
-		log.Infof("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+	// if deletes-latestGC > gcLimit {
+	// 	log.Infof("Start maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
 
-		log.Info("")
+	// 	log.Info("")
 
-		db.RunValueLogGC(settings.Tuning.DbGCDiscardRation)
-		log.Infof("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
-		// update the gcCount
-		db.Update(func(txn *badger.Txn) (err error) {
-			gcCount++
-			dbSetUint64(txn, sysKeyGCCount, gcCount)
-			return
-		})
-	}
+	// 	db.RunValueLogGC(settings.Tuning.DbGCDiscardRation)
+	// 	log.Infof("End maintenance n %d for deletes %d > %d", gcCount, deletes-latestGC, gcLimit)
+	// 	// update the gcCount
+	// 	db.Update(func(txn *badger.Txn) (err error) {
+	// 		gcCount++
+	// 		dbSetUint64(txn, sysKeyGCCount, gcCount)
+	// 		return
+	// 	})
+	// }
 }

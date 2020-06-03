@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
+	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -34,18 +32,5 @@ func init() {
 }
 
 func importCsv(cmd *cobra.Command, args []string) {
-	urlstore.NewSession(settings)
-	defer urlstore.CloseSession()
-	abp, err := filepath.Abs(csvFile)
-	if err != nil {
-		log.Fatalf("Invalid path %s: %v", csvFile, err)
-	}
-	if _, err = os.Stat(abp); os.IsNotExist(err) {
-		log.Fatalf("Invalid path %s: %v", csvFile, err)
-	}
-	if rows, err := urlstore.ImportCSV(abp); err != nil {
-		log.Fatalf("Error create backup at %s: %v", csvFile, err)
-	} else {
-		log.Info("Import complete, ", rows, " url record loaded")
-	}
+	fmt.Printf("not yet implemented")
 }

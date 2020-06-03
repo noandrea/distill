@@ -26,8 +26,8 @@ type DatastoreConfig struct {
 type ShortIDConfig struct {
 	Alphabet             string    `yaml:"alphabet" mapstructure:"alphabet"`
 	Length               int       `yaml:"length" mapstructure:"length"`
-	MaxRequests          uint64    `yaml:"max_requests" mapstructure:"max_requests"`
-	TTL                  uint64    `yaml:"ttl" mapstructure:"ttl"`
+	MaxRequests          int64     `yaml:"max_requests" mapstructure:"max_requests"`
+	TTL                  int64     `yaml:"ttl" mapstructure:"ttl"`
 	ExpireOn             time.Time `yaml:"expire_on" mapstructure:"expire_on"`
 	RootRedirectURL      string    `yaml:"root_redirect_url" mapstructure:"root_redirect_url"`
 	ExpiredRedirectURL   string    `yaml:"expired_redirect_url" mapstructure:"expired_redirect_url"`

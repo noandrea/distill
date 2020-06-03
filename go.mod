@@ -11,6 +11,7 @@ require (
 	github.com/go-chi/render v1.0.1
 	github.com/golang/protobuf v1.4.2
 	github.com/jbrodriguez/mlog v0.0.0-20180805173533-cbd5ae8e9c53
+	github.com/labstack/gommon v0.3.0
 	github.com/matoous/go-nanoid v1.3.0
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect

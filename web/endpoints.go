@@ -3,17 +3,16 @@ package web
 
 import (
 	"crypto/subtle"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"github.com/jbrodriguez/mlog"
 	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/distill"
 	"github.com/noandrea/distill/pkg/model"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -93,18 +92,18 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 	}
 	// upsert the data
 	id, err := distill.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
-	mlog.Trace("created %v", id)
+	log.Trace("created %v", id)
 	// TODO: check the actual error
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 		return
 	}
-	render.JSON(w, r, urlstore.ShortID{ID: id})
+	render.JSON(w, r, map[string]string{"ID": id})
 }
 
 func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	targetURL, err := urlstore.GetURLRedirect(shortID)
+	targetURL, err := distill.GetURLRedirect(shortID)
 	if err != nil && len(targetURL) == 0 {
 		http.Error(w, "URL not found", 404)
 	}
@@ -119,7 +118,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 func handleStatsURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	if urlInfo, err := urlstore.GetURLInfo(shortID); err == nil {
+	if urlInfo, err := distill.GetURLInfo(shortID); err == nil {
 		// send redirect
 		render.JSON(w, r, urlInfo)
 		return
@@ -128,26 +127,26 @@ func handleStatsURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetStats(w http.ResponseWriter, r *http.Request) {
-	render.JSON(w, r, *urlstore.GetStats())
+	render.JSON(w, r, map[string]string{})
 }
 
 func handleResetStats(w http.ResponseWriter, r *http.Request) {
-	err := urlstore.ResetStats()
-	if err != nil {
-		render.Render(w, r, ErrInternalError(err, err.Error()))
-		return
-	}
-	render.JSON(w, r, urlstore.GetStats())
+	// err := urlstore.ResetStats()
+	// if err != nil {
+	// 	render.Render(w, r, ErrInternalError(err, err.Error()))
+	// 	return
+	// }
+	render.JSON(w, r, map[string]string{})
 }
 
 func handleDeleteURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	err := urlstore.DeleteURL(shortID)
+	err := distill.DeleteURL(shortID)
 	if err != nil {
 		render.Render(w, r, ErrNotFound(err, "URL id not found"))
 		return
 	}
-	render.JSON(w, r, urlstore.ShortID{ID: shortID})
+	render.JSON(w, r, map[string]string{"ID": shortID})
 }
 
 //   ____    ____   ______     ______    ______

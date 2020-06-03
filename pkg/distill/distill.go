@@ -1,11 +1,8 @@
 package distill
 
 import (
-	"encoding/csv"
 	"fmt"
-	"io"
 	net "net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -13,6 +10,7 @@ import (
 	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/common"
 	"github.com/noandrea/distill/pkg/datastore"
+	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,12 +38,12 @@ func generateID(alphabet string, length int) (shortID string) {
 
 // UpsertURLSimple insert or update an url
 // shortcut for UpsertURL(true, true, time.Now())
-func UpsertURLSimple(url *URLReq) (id string, err error) {
+func UpsertURLSimple(url *model.URLReq) (id string, err error) {
 	return UpsertURL(url, true, true, time.Now())
 }
 
 // UpsertURL insert or udpdate a url mapping
-func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) (id string, err error) {
+func UpsertURL(url *model.URLReq, forceAlphabet, forceLength bool, boundAt time.Time) (id string, err error) {
 	// preprocess the url and generates the id if necessary
 	// chech that the target url is a valid url
 	if _, err = net.Parse(url.URL); err != nil {
@@ -68,30 +66,10 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 		}
 	}
 
-	// set the binding date
-	u := &URLInfo{
-		BountAt:      boundAt,
-		URL:          url.URL,
-		ExhaustedURL: url.ExhaustedURL,
-		TTL:          url.TTL,
-		ExpiredURL:   url.ExpiredURL,
-	}
-	// the local expiration always take priority
-	u.ExpireOn = calculateExpiration(u, url.TTL, url.ExpireOn)
-	if u.ExpireOn.IsZero() {
-		// global expiration
-		u.ExpireOn = calculateExpiration(u, settings.ShortID.TTL, settings.ShortID.ExpireOn)
-	}
-	// set max requests, the local version always has priority
-	u.MaxRequests = url.MaxRequests
-	if u.MaxRequests == 0 {
-		u.MaxRequests = settings.ShortID.MaxRequests
-	}
-	// cleanup the string id
-	u.ID = strings.TrimSpace(url.ID)
-	// process url id
-	if len(u.ID) == 0 {
-		err = ds.Insert(u)
+	// check if the ID is set
+	id = strings.TrimSpace(url.ID)
+	if len(id) == 0 {
+		id = generateID(settings.ShortID.Alphabet, settings.ShortID.Length)
 	} else {
 		// TODO: check longest allowed key in badger
 		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(settings.ShortID.Alphabet))
@@ -104,25 +82,53 @@ func UpsertURL(url *URLReq, forceAlphabet, forceLength bool, boundAt time.Time) 
 			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), settings.ShortID.Length)
 			return "", err
 		}
-		err = ds.Upsert(u)
 	}
 
-	if err == nil {
-		// collect statistics
-		pushEvent(&URLOp{
-			opcode: opcodeInsert,
-			ID:     u.ID,
-			err:    err,
-		})
+	// set the binding date
+	u := model.NewURLInfo(id, url.URL)
+
+	// set exhausted url
+	u.ExhaustedRedirectURL = url.ExhaustedURL
+	// set expired url
+	u.ExpiredRedirectURL = url.ExpiredURL
+	// TODO: set inactive url
+	u.InactiveRedirectURL = url.ExhaustedURL
+
+	// now set constraints
+	u.TTL = url.TTL
+	// the local expiration always take priority
+	u.SetExpirationTime(calculateExpiration(u, url.TTL, url.ExpireOn))
+	if u.GetExpirationTime().IsZero() {
+		// global expiration
+		u.SetExpirationTime(calculateExpiration(u, settings.ShortID.TTL, settings.ShortID.ExpireOn))
 	}
-	return u.ID, err
+	// set max requests, the local version always has priority
+	u.ResolveLimit = url.MaxRequests
+	if u.ResolveLimit == 0 {
+		u.ResolveLimit = settings.ShortID.MaxRequests
+	}
+	// cleanup the string id
+	u.Id = strings.TrimSpace(url.ID)
+	// process url id
+
+	if err = ds.Upsert(id, u); err == nil {
+		// collect statistics
+		datastore.PushEvent(&model.URLOp{
+			Opcode: model.OpcodeInsert,
+			ID:     u.Id,
+			Err:    err,
+		})
+	} else {
+		log.Error("Error inserting new id")
+	}
+	return
 }
 
 // calculateExpiration calculate the expiration of a url
 // returns the highest date between the date binding + ttl and the date expiration date
-func calculateExpiration(u *URLInfo, ttl uint64, expireDate time.Time) (expire time.Time) {
+func calculateExpiration(u *model.URLInfo, ttl int64, expireDate time.Time) (expire time.Time) {
 	if ttl > 0 {
-		expire = u.BountAt.Add(time.Duration(ttl) * time.Second)
+		expire = common.ProtoTime(u.ActiveFrom).Add(time.Duration(ttl) * time.Second)
 	}
 	if expireDate.After(expire) {
 		expire = expireDate
@@ -132,13 +138,13 @@ func calculateExpiration(u *URLInfo, ttl uint64, expireDate time.Time) (expire t
 
 // DeleteURL delete a url mapping
 func DeleteURL(id string) (err error) {
-	err = Delete(id)
+	err = ds.Delete(id)
 	if err != nil {
 		return
 	}
 	// collect statistics
-	pushEvent(&URLOp{
-		opcode: opcodeDelete,
+	datastore.PushEvent(&model.URLOp{
+		Opcode: model.OpcodeDelete,
 		ID:     id,
 	})
 	return
@@ -147,87 +153,88 @@ func DeleteURL(id string) (err error) {
 // GetURLRedirect retrieve the redicrect url associated to an id
 // it also fire an event of tipe opcodeGet
 func GetURLRedirect(id string) (redirectURL string, err error) {
-	urlInfo, err := Get(id)
+	// urlInfo
+	u, err := ds.Hit(id)
 	if err != nil {
 		return
 	}
 
-	urlop := &URLOp{ID: urlInfo.ID}
+	urlop := &model.URLOp{ID: u.Id}
 
-	if !urlInfo.ExpireOn.IsZero() && time.Now().After(urlInfo.ExpireOn) {
-		log.Tracef("Expire date for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		err = ErrURLExpired
-		common.DefaultIfEmptyStr(&urlInfo.ExpiredURL, settings.ShortID.ExpiredRedirectURL)
-		redirectURL = urlInfo.ExpiredURL
+	idExpiration := common.ProtoTime(u.ExpiresOn)
 
-		urlop.err = err
-		urlop.opcode = opcodeExpired
-		pushEvent(urlop)
+	if !idExpiration.IsZero() && time.Now().After(idExpiration) {
+		log.Debugf("Expire date for %v, limit %v, requests %v", u.Id, u.Hits, u.ResolveLimit)
+		err = model.ErrURLExpired
+		redirectURL = common.IfEmptyThen(u.ExpiredRedirectURL, settings.ShortID.ExpiredRedirectURL)
+
+		urlop.Err, urlop.Opcode = err, model.OpcodeExpired
+		datastore.PushEvent(urlop)
 		return
 	}
-	if urlInfo.MaxRequests > 0 && urlInfo.Counter > urlInfo.MaxRequests {
-		log.Tracef("Expire max request for %v, limit %v, requests %v", urlInfo.ID, urlInfo.Counter, urlInfo.MaxRequests)
-		err = ErrURLExhausted
-		common.DefaultIfEmptyStr(&urlInfo.ExhaustedURL, settings.ShortID.ExhaustedRedirectURL)
-		redirectURL = urlInfo.ExhaustedURL
-
-		urlop.err = err
-		urlop.opcode = opcodeExpired
-		pushEvent(urlop)
+	if u.ResolveLimit > 0 && u.Hits > u.ResolveLimit {
+		log.Tracef("Expire max request for %v, limit %v, requests %v",
+			u.Id,
+			u.Hits,
+			u.ResolveLimit)
+		err = model.ErrURLExhausted
+		redirectURL = common.IfEmptyThen(u.ExhaustedRedirectURL, settings.ShortID.ExhaustedRedirectURL)
+		// push event
+		urlop.Err, urlop.Opcode = err, model.OpcodeExpired
+		datastore.PushEvent(urlop)
 		return
 	}
 
 	// collect statistics
-	urlop.err = err
-	urlop.opcode = opcodeGet
-	pushEvent(urlop)
+	urlop.Err, urlop.Opcode = err, model.OpcodeGet
+	datastore.PushEvent(urlop)
 	// return the redirectUrl
-	redirectURL = urlInfo.URL
+	redirectURL = u.RedirectURL
 	return
 }
 
 // GetURLInfo retrieve the url info associated to an id
-func GetURLInfo(id string) (urlInfo *URLInfo, err error) {
-	urlInfo, err = Peek(id)
+func GetURLInfo(id string) (u model.URLInfo, err error) {
+	u, err = ds.Peek(id)
 	return
 }
 
 // ImportCSV import urls from a csv file
 func ImportCSV(inFile string) (rows int, err error) {
-	fp, err := os.Open(inFile)
-	if err != nil {
-		return
-	}
-	defer fp.Close()
-	start := time.Now()
-	csvR := csv.NewReader(fp)
-	for {
-		record, err := csvR.Read()
-		if err == io.EOF {
-			log.Error(err)
-			break
-		}
-		if err != nil {
-			log.Error(err)
-			break
-		}
-		if rows == 0 && common.IsEqStr(record[0], "url") {
-			// header, skip
-			continue
-		}
-		u := &URLReq{}
-		err = u.UnmarshalRecord(record)
-		if err != nil {
-			log.Error(err)
-			break
-		}
-		_, err = UpsertURL(u, false, false, time.Now())
-		if err != nil {
-			log.Error(err)
-			break
-		}
-		rows++
-	}
-	log.Infof("Import complete with %d rows in %s", rows, time.Since(start))
+	// fp, err := os.Open(inFile)
+	// if err != nil {
+	// 	return
+	// }
+	// defer fp.Close()
+	// start := time.Now()
+	// csvR := csv.NewReader(fp)
+	// for {
+	// 	record, err := csvR.Read()
+	// 	if err == io.EOF {
+	// 		log.Error(err)
+	// 		break
+	// 	}
+	// 	if err != nil {
+	// 		log.Error(err)
+	// 		break
+	// 	}
+	// 	if rows == 0 && common.IsEqStr(record[0], "url") {
+	// 		// header, skip
+	// 		continue
+	// 	}
+	// 	u := &model.URLReq{}
+	// 	err = u.UnmarshalRecord(record)
+	// 	if err != nil {
+	// 		log.Error(err)
+	// 		break
+	// 	}
+	// 	_, err = UpsertURL(u, false, false, time.Now())
+	// 	if err != nil {
+	// 		log.Error(err)
+	// 		break
+	// 	}
+	// 	rows++
+	// }
+	// log.Infof("Import complete with %d rows in %s", rows, time.Since(start))
 	return
 }

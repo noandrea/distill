@@ -222,15 +222,18 @@ Distill can be run via `systemd`, check the [example](https://github.com/noandre
 the datastore package exposes an interface that has the following
 
 datastore
-  Store(tenant, key, interface{}) err
-  Load(tenant, key, &interface{}) err
+  Put(key string, data protoreflect.ProtoMessage) err
+  Get(key string, data *protoreflect.ProtoMessage) (found bool, err error)
   
-  ConunterPlus(tenant, key) err
-  ConunterMinus(tenant, key) err
+  ConunterPlus(key) err
+  ConunterMinus(key) err
 
-  Get(tenant, id) (URLInfo, err)
-  Insert(tenant, URLInfo) err  
-  Upsert(tenant, URLInfo) err
+  Hit(key string) (URLInfo, error)
+  Peek(key string) (URLInfo, error)
+  Insert(key string, u URLInfo) err
+  Upsert(key string, u URLInfo) err
+  Delete(key string) err
+
 
 distill
   deal with settings

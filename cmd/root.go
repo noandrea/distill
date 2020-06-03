@@ -55,13 +55,13 @@ func initConfig() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	// set configuration paramteres
+	// set configuration parameters
 	viper.SetConfigName("config")       // name of config file (without extension)
 	viper.AddConfigPath("/etc/distill") // adding home directory as first search path
 	viper.SetEnvPrefix("DISTILL")
 	viper.AutomaticEnv() // read in environment variables that match
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	urlstore.Defaults() // load defaults for configuration
+	config.Defaults() // load defaults for configuration
 	// if there is the config file read it
 	if len(cfgFile) > 0 { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
@@ -69,7 +69,7 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		log.Infof("Using config file: %v", viper.ConfigFileUsed())
+		log.Info("Using config file: ", viper.ConfigFileUsed())
 		viper.Unmarshal(&settings)
 		settings.Validate()
 	} else {

@@ -1,25 +1,20 @@
 package datastore
 
 import (
-	"encoding/csv"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
-	"sync"
 
-	"github.com/bluele/gcache"
 	"github.com/dgraph-io/badger"
 	"github.com/noandrea/distill/config"
+	"github.com/noandrea/distill/pkg/common"
 	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type EmbedStore struct {
-	db  *badger.DB
-	uc  gcache.Cache
-	st  *model.Statistics
-	stM sync.Mutex
+	db *badger.DB
 }
 
 var store *EmbedStore
@@ -41,150 +36,142 @@ func NewEmbedStore(cfg config.DatastoreConfig) *EmbedStore {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// initialize internal cache
-	store.uc = gcache.New(settings.Tuning.URLCacheSize).
-		EvictedFunc(whenRemoved).
-		PurgeVisitorFunc(whenRemoved).
-		ARC().
-		Build()
-	// initialize statistics
-	err = store.LoadStats()
-	if err != nil {
-		log.Fatal(err)
-	}
 	return store
 }
 
-// CloseSession closes the underling storage
-func (store *EmbedStore) Close() {
-	store.SaveStats()
-	store.uc.Purge()
-	store.db.Close()
+// Close closes the underling storage
+func (es *EmbedStore) Close() {
+	es.db.Close()
 }
 
-// UpdateStats uppdate urls statistics
-func (store *EmbedStore) UpdateStats(s model.Statistics) {
-	store.stM.Lock()
-	defer store.stM.Unlock()
-	store.st.Urls += s.Urls
-	store.st.Gets += s.Gets
-	store.st.Deletes += s.Deletes
-	store.st.Upserts += s.Upserts
-	store.st.GetsExpired += s.GetsExpired
-	store.st.LastRequest = s.LastRequest
-}
-
-// ResetStats reset global statistcs
-func (store *EmbedStore) ResetStats() (err error) {
-	store.stM.Lock()
-	defer store.stM.Unlock()
-	store.st = &model.Statistics{}
-	// iterate over the urls
-	i := NewURLIterator()
-	for i.HasNext() {
-		u, err := i.NextURL()
+// Put store arbitrary data (overwrite existing)
+func (es *EmbedStore) Put(key string, data protoreflect.ProtoMessage) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		// marshal and store the data
+		v, err := proto.Marshal(data)
 		if err != nil {
-			log.Warning("Warning looping through the URLs")
+			return
 		}
-		store.st.Urls++
-		store.st.Upserts++
-		store.st.Gets += u.Counter
-	}
-	// close the iterator
-	i.Close()
-	// run the update
-	err = store.SaveStats()
-	if err != nil {
-		log.Warning("Error while rest stats:", err)
-	}
+		return txn.Set([]byte(key), v)
+	})
 	return
 }
 
-// GetStats get the statistics
-func (store *EmbedStore) GetStats() (s *model.Statistics) {
-	return store.st
+// Get get existing data
+func (es *EmbedStore) Get(key string, data protoreflect.ProtoMessage) (found bool, err error) {
+	err = es.db.View(func(txn *badger.Txn) (err error) {
+		v, err := dbGet(txn, []byte(key))
+		if err != nil {
+			return
+		}
+		found = true
+		err = proto.Unmarshal(v, data)
+		return
+	})
+	return
+}
+
+// CounterSet set a counter value
+func (es *EmbedStore) CounterSet(key string) (err error) {
+	return
+}
+
+// CounterGet get a counter value
+func (es *EmbedStore) CounterGet(key string) (val int, err error) {
+	return
+}
+
+// CounterPlus increase a counter
+func (es *EmbedStore) CounterPlus(key string) (err error) {
+	return
+}
+
+// CounterMinus decrease a counter
+func (es *EmbedStore) CounterMinus(key string) (err error) {
+	return
+}
+
+// Hit hit an url, return the url that has been hit (with updated hit counter inclusive)
+func (es *EmbedStore) Hit(key string) (u model.URLInfo, err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		// key to byte slice
+		k := []byte(key)
+		// get the element
+		v, err := dbGet(txn, k)
+		if err != nil {
+			return
+		}
+		// unmarshal the result
+		err = proto.Unmarshal(v, &u)
+		if err != nil {
+			return
+		}
+		// update the Hit counter
+		u.Hits++
+		// marshal the update
+		data, err := proto.Marshal(&u)
+		if err != nil {
+			return
+		}
+		// execute the update
+		err = txn.Set(k, data)
+		return
+	})
+	return
+}
+
+// Peek get an url without updating the hit count
+func (es *EmbedStore) Peek(key string) (u model.URLInfo, err error) {
+	err = es.db.View(func(txn *badger.Txn) (err error) {
+		v, err := dbGet(txn, []byte(key))
+		if err != nil {
+			return
+		}
+		err = proto.Unmarshal(v, &u)
+		return
+	})
+	return
 }
 
 // Insert an url into the url store
-func (store *EmbedStore) Insert(u *model.URLInfo) (err error) {
-	err = store.db.Update(func(txn *badger.Txn) (err error) {
-		u.ID = generateID(settings.ShortID.Alphabet, settings.ShortID.Length)
-		// generateID always return a valid id
-		key, _ := keyURL(u.ID)
-		// TODO: need another limit (numeber of retries)
-		// TODO: also check the type of error
-		for _, err = dbGet(txn, key); err == nil; {
-			u.ID = generateID(settings.ShortID.Alphabet, settings.ShortID.Length)
-			// generateID always return a valid id
-			key, _ = keyURL(u.ID)
+func (es *EmbedStore) Insert(key string, u *model.URLInfo) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		k := []byte(key)
+		// if the key exists return error
+		if _, e := dbGet(txn, k); e == nil {
+			err = fmt.Errorf("duplicated key %s", key)
+			return
 		}
-		err = dbSetBin(txn, key, u)
+		v, err := proto.Marshal(u)
+		if err != nil {
+			return
+		}
+		err = txn.Set(k, v)
 		return
 	})
 	return err
 }
 
 // Upsert an url into the the urlstore
-func (store *EmbedStore) Upsert(u *model.URLInfo) (err error) {
-	err = store.db.Update(func(txn *badger.Txn) (err error) {
-		key, err := keyURL(u.ID)
+func (es *EmbedStore) Upsert(key string, u *model.URLInfo) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		k := []byte(key)
+		v, err := proto.Marshal(u)
 		if err != nil {
 			return
 		}
-		err = dbSetBin(txn, key, u)
+		err = txn.Set(k, v)
 		return
 	})
 	return err
 }
 
-// Peek retrive a url without incrementing the counter
-func (store *EmbedStore) Peek(id string) (u *model.URLInfo, err error) {
-	uic, err := store.uc.Get(id)
-	if err == gcache.KeyNotFoundError {
-		log.Trace("cache miss for ", id)
-		err = store.db.View(func(txn *badger.Txn) (err error) {
-			u = &model.URLInfo{}
-			ku, err := keyURL(id)
-			if err != nil {
-				return
-			}
-			err = dbGetBin(txn, ku, u)
-			if err != nil {
-				return
-			}
-			return
-		})
-	} else {
-		u = uic.(*model.URLInfo)
-	}
-	return
-}
-
-// Get an url from the datastore
-func (store *EmbedStore) Get(id string) (u *model.URLInfo, err error) {
-	u, err = store.Peek(id)
-	if err != nil {
-		return
-	}
-	// increase the counter
-	u.Counter++
-	store.uc.Set(id, u)
-	return
-}
-
 // Delete deletes an url
-func (store *EmbedStore) Delete(id string) (err error) {
-	err = store.db.Update(func(txn *badger.Txn) (err error) {
-		// remove from cache
-		store.uc.Remove(id)
-		// remove from storage
-		key, err := keyURL(id)
-		if err != nil {
-			return
-		}
+func (es *EmbedStore) Delete(key string) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
 		// then delete the keys
-		err = txn.Delete(key)
-		log.Trace("Delete() 01:", err)
+		err = txn.Delete([]byte(key))
+		log.Debug("Delete(", key, ") error:", err)
 		return err
 	})
 	log.Trace("Delete() 02:", err)
@@ -192,142 +179,142 @@ func (store *EmbedStore) Delete(id string) (err error) {
 }
 
 // Backup the database as csv
-func (store *EmbedStore) Backup(outFile string) (err error) {
-	ext := filepath.Ext(outFile)
-	switch ext {
-	case backupExtBin:
-		// create output file
-		fp, err := os.Create(outFile)
-		if err != nil {
-			return err
-		}
-		ts, err := store.db.Backup(fp, 0)
-		if err != nil {
-			return err
-		}
-		log.Info("Backup completed at ", ts)
-	case backupExtCsv:
-		err = store.db.View(func(txn *badger.Txn) (err error) {
-			// create output file
-			fp, err := os.Create(outFile)
-			if err != nil {
-				return
-			}
-			defer fp.Close()
-			// open the csv writer
-			csvW := csv.NewWriter(fp)
-			defer csvW.Flush()
+func (es *EmbedStore) Backup(outFile string) (err error) {
+	// ext := filepath.Ext(outFile)
+	// switch ext {
+	// case backupExtBin:
+	// 	// create output file
+	// 	fp, err := os.Create(outFile)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	ts, err := es.db.Backup(fp, 0)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	log.Info("Backup completed at ", ts)
+	// case backupExtCsv:
+	// 	err = store.db.View(func(txn *badger.Txn) (err error) {
+	// 		// create output file
+	// 		fp, err := os.Create(outFile)
+	// 		if err != nil {
+	// 			return
+	// 		}
+	// 		defer fp.Close()
+	// 		// open the csv writer
+	// 		csvW := csv.NewWriter(fp)
+	// 		defer csvW.Flush()
 
-			// open the iterator
-			opts := badger.DefaultIteratorOptions
-			opts.PrefetchSize = settings.Tuning.BckCSVIterPrefetchSize
-			opts.PrefetchValues = true
-			it := txn.NewIterator(opts)
-			defer it.Close()
+	// 		// open the iterator
+	// 		opts := badger.DefaultIteratorOptions
+	// 		opts.PrefetchSize = settings.Tuning.BckCSVIterPrefetchSize
+	// 		opts.PrefetchValues = true
+	// 		it := txn.NewIterator(opts)
+	// 		defer it.Close()
 
-			p := []byte{keyURLPrefix}
-			for it.Seek(p); it.ValidForPrefix(p); it.Next() {
-				// retrieve values
-				err := it.Item().Value(func(v []byte) error {
-					u := &model.URLInfo{}
-					u.UnmarshalBinary(v)
-					return csvW.Write(u.MarshalRecord())
-				})
-				if err != nil {
-					break
-				}
-			}
-			return
-		})
-	default:
-		err = fmt.Errorf("Unrecognized backup format %v", ext)
-		log.Warning("Unrecognized backup format:", ext)
-	}
+	// 		p := []byte{keyURLPrefix}
+	// 		for it.Seek(p); it.ValidForPrefix(p); it.Next() {
+	// 			// retrieve values
+	// 			err := it.Item().Value(func(v []byte) error {
+	// 				u := &model.URLInfo{}
+	// 				u.UnmarshalBinary(v)
+	// 				return csvW.Write(u.MarshalRecord())
+	// 			})
+	// 			if err != nil {
+	// 				break
+	// 			}
+	// 		}
+	// 		return
+	// 	})
+	// default:
+	// 	err = fmt.Errorf("Unrecognized backup format %v", ext)
+	// 	log.Warning("Unrecognized backup format:", ext)
+	// }
 	return
 }
 
 // Restore the database from a backup file
-func (store *EmbedStore) Restore(inFile string) (count int, err error) {
-	ext := filepath.Ext(inFile)
-	switch ext {
-	case backupExtBin:
-		fp, err := os.Open(inFile)
-		if err != nil {
-			return 0, err
-		}
-		store.db.Load(fp, 16)
-		fp.Close()
-	case backupExtCsv:
-		fp, err := os.Open(inFile)
-		if err != nil {
-			return 0, err
-		}
-		csvR := csv.NewReader(fp)
-		for {
-			record, err := csvR.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				break
-			}
-			u := &model.URLInfo{}
-			if err = u.UnmarshalRecord(record); err != nil {
-				break
-			}
-			if err = store.Upsert(u); err != nil {
-				break
-			}
-			count++
-		}
-		fp.Close()
-	default:
-		err = fmt.Errorf("Unrecognized backup format %v", ext)
-		log.Warning("Unrecognized backup format:", ext)
-	}
+func (es *EmbedStore) Restore(inFile string) (count int, err error) {
+	// ext := filepath.Ext(inFile)
+	// switch ext {
+	// case backupExtBin:
+	// 	fp, err := os.Open(inFile)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	es.db.Load(fp, 16)
+	// 	fp.Close()
+	// case backupExtCsv:
+	// 	fp, err := os.Open(inFile)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	csvR := csv.NewReader(fp)
+	// 	for {
+	// 		record, err := csvR.Read()
+	// 		if err == io.EOF {
+	// 			break
+	// 		}
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 		u := &model.URLInfo{}
+	// 		if err = u.UnmarshalRecord(record); err != nil {
+	// 			break
+	// 		}
+	// 		if err = store.Upsert(u); err != nil {
+	// 			break
+	// 		}
+	// 		count++
+	// 	}
+	// 	fp.Close()
+	// default:
+	// 	err = fmt.Errorf("Unrecognized backup format %v", ext)
+	// 	log.Warning("Unrecognized backup format:", ext)
+	// }
 	return
 }
 
 // NewURLIterator return an url iterator over the database
-func NewURLIterator() *URLIterator {
-	txn := db.NewTransaction(false)
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	px := []byte{keyURLPrefix}
-	it.Seek(px)
-	return &URLIterator{
-		Transaction: txn,
-		Iterator:    it,
-		KeyPrefix:   px,
-	}
-}
+// func (es *EmbedStore) NewURLIterator() *URLIterator {
+// 	// txn := es.db.NewTransaction(false)
+// 	// it := txn.NewIterator(badger.DefaultIteratorOptions)
+// 	// px := []byte{keyURLPrefix}
+// 	// it.Seek(px)
+// 	// return &URLIterator{
+// 	// 	Transaction: txn,
+// 	// 	Iterator:    it,
+// 	// 	KeyPrefix:   px,
+// 	// }
+// }
 
-// URLIterator an iterator over URLs
-type URLIterator struct {
-	Transaction *badger.Txn
-	Iterator    *badger.Iterator
-	KeyPrefix   []byte
-}
+// // URLIterator an iterator over URLs
+// type URLIterator struct {
+// 	Transaction *badger.Txn
+// 	Iterator    *badger.Iterator
+// 	KeyPrefix   []byte
+// }
 
-// HasNext tells if there are still elements in the list
-func (i *URLIterator) HasNext() bool {
-	i.Iterator.Next()
-	return i.Iterator.ValidForPrefix(i.KeyPrefix)
-}
+// // HasNext tells if there are still elements in the list
+// func (i *URLIterator) HasNext() bool {
+// 	i.Iterator.Next()
+// 	return i.Iterator.ValidForPrefix(i.KeyPrefix)
+// }
 
-// NextURL get the next URL from the iterator
-func (i *URLIterator) NextURL() (u *model.URLInfo, err error) {
-	u = &model.URLInfo{}
-	err = i.Iterator.Item().Value(func(v []byte) error {
-		return u.UnmarshalBinary(v)
-	})
-	return
-}
+// // NextURL get the next URL from the iterator
+// func (i *URLIterator) NextURL() (u *model.URLInfo, err error) {
+// 	u = &model.URLInfo{}
+// 	err = i.Iterator.Item().Value(func(v []byte) error {
+// 		return u.UnmarshalBinary(v)
+// 	})
+// 	return
+// }
 
-// Close the iterator
-func (i *URLIterator) Close() {
-	i.Iterator.Close()
-	i.Transaction.Discard()
-}
+// // Close the iterator
+// func (i *URLIterator) Close() {
+// 	i.Iterator.Close()
+// 	i.Transaction.Discard()
+// }
 
 // Helper functions
 
@@ -341,7 +328,7 @@ func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
 }
 
 func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
-	err := txn.Set(k, itoa(val))
+	err := txn.Set(k, common.Itoa(val))
 	log.Trace("dbSetInt64 write:", k)
 	if err != nil {
 		log.Warningf("update key %X error %v ", k, err)
@@ -358,6 +345,8 @@ func dbSetBin(txn *badger.Txn, k []byte, val model.BinSerializable) (err error) 
 	return
 }
 
+// dbGet retrieve the value of a key
+// ErrKeyNotFound is returned if the key is not found
 func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 	item, err := txn.Get(k)
 	if err != nil {
@@ -367,7 +356,7 @@ func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {
 		val = v
 		return nil
 	})
-	log.Tracef("dbGet read %s v:%d ", k, item.Version())
+	log.Debug("dbGet read ", k, " v:", item.Version())
 	return
 }
 
@@ -376,21 +365,12 @@ func dbGetUint64(txn *badger.Txn, k []byte) (i uint64) {
 	if err != nil {
 		return
 	}
-	val := numberZero
+	val := []byte{0}
 	err = item.Value(func(v []byte) error {
 		val = v
 		return nil
 	})
 	log.Tracef("dbGetInt64 read %s v:%d ", k, item.Version())
-	i = atoi(val)
-	return
-}
-
-func dbGetBin(txn *badger.Txn, k []byte, val model.BinSerializable) (err error) {
-	v, err := dbGet(txn, k)
-	if err != nil {
-		return err
-	}
-	err = val.UnmarshalBinary(v)
+	i = common.Atoi(val)
 	return
 }

@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-
-	log "github.com/sirupsen/logrus"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -40,17 +37,5 @@ func init() {
 }
 
 func backup(cmd *cobra.Command, args []string) {
-	urlstore.NewSession(settings)
-	defer urlstore.CloseSession()
-	abp, err := filepath.Abs(backupFile)
-	if err != nil {
-		log.Fatalf("Invalid path %s: %v", backupFile, err)
-	}
-	err = os.MkdirAll(filepath.Dir(abp), os.ModeDir)
-	if err != nil {
-		log.Fatalf("Error create backup path to %s: %v", backupFile, err)
-	}
-	if err = urlstore.Backup(abp); err != nil {
-		log.Fatalf("Error create backup at %s: %v", backupFile, err)
-	}
+	fmt.Printf("not yet implemented")
 }
