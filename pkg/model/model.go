@@ -46,6 +46,22 @@ func NewURLInfo(ID, redirectURL string) *URLInfo {
 	}
 }
 
+// URLInfoFromURLReq copy fields from URLReq to URLInfo
+func URLInfoFromURLReq(r URLReq) (u *URLInfo) {
+	return &URLInfo{
+		Id:                   r.ID,
+		RedirectURL:          r.RedirectURL,
+		RecordedOn:           common.TimeProto(time.Now()),
+		ExhaustedRedirectURL: r.ExhaustedRedirectURL,
+		ExpiredRedirectURL:   r.ExpiredRedirectURL,
+		InactiveRedirectURL:  r.InactiveRedirectURL,
+		TTL:                  r.TTL,
+		ResolveLimit:         r.ResolveLimit,
+		ExpiresOn:            common.TimeProto(r.ExpiresOn),
+		ActiveFrom:           common.TimeProto(r.ActiveFrom),
+	}
+}
+
 // BinSerializable interface for binary serializable structs
 type BinSerializable interface {
 	MarshalBinary() (data []byte, err error)
@@ -72,13 +88,15 @@ type ShortID struct {
 
 // URLReq request from a client to register an url
 type URLReq struct {
-	ID           string    `json:"id"`
-	URL          string    `json:"url"`
-	MaxRequests  int64     `json:"max_requests,omitempty"`
-	ExhaustedURL string    `json:"url_exhausted"`
-	TTL          int64     `json:"ttl,omitempty"`
-	ExpireOn     time.Time `json:"expire_on,omitempty"`
-	ExpiredURL   string    `json:"url_expired"`
+	ID                   string    `json:"id"`
+	RedirectURL          string    `json:"redirect_url"`
+	ResolveLimit         int64     `json:"max_requests,omitempty"`
+	TTL                  int64     `json:"ttl,omitempty"`
+	ExpiresOn            time.Time `json:"expire_on,omitempty"`
+	ActiveFrom           time.Time `json:"active_from,omitempty"`
+	ExpiredRedirectURL   string    `json:"redirect_expired_url"`
+	ExhaustedRedirectURL string    `json:"redirect_exhausted_url"`
+	InactiveRedirectURL  string    `json:"redirect_inactive_url"`
 }
 
 // Statistics contains the global statistics

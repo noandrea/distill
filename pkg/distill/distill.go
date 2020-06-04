@@ -2,11 +2,11 @@ package distill
 
 import (
 	"fmt"
-	net "net/url"
-	"regexp"
+
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/purell"
 	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/common"
 	"github.com/noandrea/distill/pkg/datastore"
@@ -36,103 +36,129 @@ func generateID(alphabet string, length int) (shortID string) {
 	return
 }
 
-// UpsertURLSimple insert or update an url
-// shortcut for UpsertURL(true, true, time.Now())
-func UpsertURLSimple(url *model.URLReq) (id string, err error) {
-	return UpsertURL(url, true, true, time.Now())
-}
-
-// UpsertURL insert or udpdate a url mapping
-func UpsertURL(url *model.URLReq, forceAlphabet, forceLength bool, boundAt time.Time) (id string, err error) {
-	// preprocess the url and generates the id if necessary
-	// chech that the target url is a valid url
-	if _, err = net.Parse(url.URL); err != nil {
-		log.Info(url.URL)
+func validateURL(url *string, allowEmpty bool) (err error) {
+	if len(strings.TrimSpace(*url)) == 0 && allowEmpty {
+		return
+	}
+	// normalize url
+	nu, err := purell.NormalizeURLString(*url,
+		purell.FlagLowercaseScheme|
+			purell.FlagLowercaseHost|purell.FlagUppercaseEscapes)
+	if err != nil {
 		log.Error(err)
 		return
 	}
-	// check that, if set ExhaustedURL is a valid url
-	if len(url.ExhaustedURL) > 0 {
-		if _, err = net.Parse(url.ExhaustedURL); err != nil {
-			log.Error(err)
-			return
-		}
-	}
-	// check that, if set ExhaustedURL is a valid url
-	if len(url.ExpiredURL) > 0 {
-		if _, err = net.Parse(url.ExpiredURL); err != nil {
-			log.Error(err)
-			return
-		}
-	}
-
-	// check if the ID is set
-	id = strings.TrimSpace(url.ID)
-	if len(id) == 0 {
-		id = generateID(settings.ShortID.Alphabet, settings.ShortID.Length)
-	} else {
-		// TODO: check longest allowed key in badger
-		p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(settings.ShortID.Alphabet))
-		m, _ := regexp.MatchString(p, url.ID)
-		if forceAlphabet && m {
-			err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
-			return "", err
-		}
-		if forceLength && len(url.ID) != settings.ShortID.Length {
-			err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), settings.ShortID.Length)
-			return "", err
-		}
-	}
-
-	// set the binding date
-	u := model.NewURLInfo(id, url.URL)
-
-	// set exhausted url
-	u.ExhaustedRedirectURL = url.ExhaustedURL
-	// set expired url
-	u.ExpiredRedirectURL = url.ExpiredURL
-	// TODO: set inactive url
-	u.InactiveRedirectURL = url.ExhaustedURL
-
-	// now set constraints
-	u.TTL = url.TTL
-	// the local expiration always take priority
-	u.SetExpirationTime(calculateExpiration(u, url.TTL, url.ExpireOn))
-	if u.GetExpirationTime().IsZero() {
-		// global expiration
-		u.SetExpirationTime(calculateExpiration(u, settings.ShortID.TTL, settings.ShortID.ExpireOn))
-	}
-	// set max requests, the local version always has priority
-	u.ResolveLimit = url.MaxRequests
-	if u.ResolveLimit == 0 {
-		u.ResolveLimit = settings.ShortID.MaxRequests
-	}
-	// cleanup the string id
-	u.Id = strings.TrimSpace(url.ID)
-	// process url id
-
-	if err = ds.Upsert(id, u); err == nil {
-		// collect statistics
-		datastore.PushEvent(&model.URLOp{
-			Opcode: model.OpcodeInsert,
-			ID:     u.Id,
-			Err:    err,
-		})
-	} else {
-		log.Error("Error inserting new id")
-	}
+	url = &nu
 	return
 }
 
 // calculateExpiration calculate the expiration of a url
 // returns the highest date between the date binding + ttl and the date expiration date
-func calculateExpiration(u *model.URLInfo, ttl int64, expireDate time.Time) (expire time.Time) {
-	if ttl > 0 {
-		expire = common.ProtoTime(u.ActiveFrom).Add(time.Duration(ttl) * time.Second)
+func calculateExpiration(activeFrom time.Time, ttl int64, expiresOn time.Time) (expirationDate time.Time, err error) {
+	// add the ttl
+	expirationDate = activeFrom.Add(time.Duration(ttl) * time.Second)
+	// check if the dates make sense
+	if !expiresOn.IsZero() && activeFrom.After(expiresOn) {
+		err = fmt.Errorf("URL expired on submission, activeFrom = %s, expiresOn = %s", activeFrom, expiresOn)
+		return
 	}
-	if expireDate.After(expire) {
-		expire = expireDate
+	// get the latest date
+	if expiresOn.After(expirationDate) {
+		expirationDate = expiresOn
 	}
+	return
+}
+
+func buildURLInfo(url *model.URLReq, shortIDAlphabet string, shortIDLength int) (u *model.URLInfo, err error) {
+	u = model.URLInfoFromURLReq(*url)
+	// preprocess the url and generates the id if necessary
+	// check that the target url is a valid url
+	if err = validateURL(&u.RedirectURL, false); err != nil {
+		log.Error("RedirectURL  is not a valid url: ", err)
+		return
+	}
+	// check the exhausted url
+	if err = validateURL(&u.ExhaustedRedirectURL, true); err != nil {
+		log.Error("ExhaustedRedirectURL  is not a valid url: ", err)
+		return
+	}
+	// check if expired redirect url is set and valid
+	if err = validateURL(&u.ExpiredRedirectURL, true); err != nil {
+		log.Error("ExpiredRedirectURL  is not a valid url: ", err)
+		return
+	}
+	// check if inactive redirect url is set and valid
+	if err = validateURL(&url.InactiveRedirectURL, true); err != nil {
+		log.Error("InactiveRedirectURL  is not a valid url: ", err)
+		return
+	}
+
+	// check if the ID is set
+	u.Id = strings.TrimSpace(u.Id)
+	if len(u.Id) == 0 {
+		u.Id = generateID(shortIDAlphabet, shortIDLength)
+	}
+	// } else {
+	// 	// TODO: check longest allowed key in badger
+	// 	p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(settings.ShortID.Alphabet))
+	// 	m, _ := regexp.MatchString(p, url.ID)
+	// 	if forceAlphabet && m {
+	// 		err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
+	// 		return "", err
+	// 	}
+	// 	if forceLength && len(url.ID) != settings.ShortID.Length {
+	// 		err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), settings.ShortID.Length)
+	// 		return "", err
+	// 	}
+	// }
+
+	// TODO: normalize urls
+
+	// work with expiration times
+	// compute the active from date
+	activeFrom := common.ProtoTime(u.ActiveFrom)
+	recordedOn := common.ProtoTime(u.RecordedOn)
+	if activeFrom.Before(recordedOn) {
+		activeFrom := recordedOn
+		u.ActiveFrom = common.TimeProto(activeFrom)
+	}
+	// compute the expiration date
+	ttl := u.TTL
+	expiresOn := common.ProtoTime(u.ExpiresOn)
+	expiresOn, err = calculateExpiration(activeFrom, ttl, expiresOn)
+	if err != nil {
+		log.Error("Error calculating expiration:", err)
+		return
+	}
+	u.ExpiresOn = common.TimeProto(expiresOn)
+
+	// set max requests, the local version always has priority
+	if u.ResolveLimit == 0 {
+		u.ResolveLimit = settings.ShortID.MaxRequests
+	}
+	return
+}
+
+// UpsertURLSimple insert or update an url
+// shortcut for UpsertURL(true, true, time.Now())
+func UpsertURLSimple(url *model.URLReq) (id string, err error) {
+	return UpsertURL(url, true, true)
+}
+
+// UpsertURL insert or udpdate a url mapping
+func UpsertURL(url *model.URLReq, forceAlphabet, forceLength bool) (id string, err error) {
+	u, err := buildURLInfo(url, settings.ShortID.Alphabet, settings.ShortID.Length)
+	if err = ds.Upsert(id, u); err != nil {
+		log.Error("Error inserting new id: ", err)
+		return
+	}
+	id = u.Id
+	// collect statistics
+	datastore.PushEvent(&model.URLOp{
+		Opcode: model.OpcodeInsert,
+		ID:     id,
+		Err:    err,
+	})
 	return
 }
 
@@ -150,8 +176,8 @@ func DeleteURL(id string) (err error) {
 	return
 }
 
-// GetURLRedirect retrieve the redicrect url associated to an id
-// it also fire an event of tipe opcodeGet
+// GetURLRedirect retrieve the redirect url associated to an id
+// it also fire an event of type opcodeGet
 func GetURLRedirect(id string) (redirectURL string, err error) {
 	// urlInfo
 	u, err := ds.Hit(id)

@@ -17,19 +17,28 @@ that can be used for specific events.
 
 - Choose the alphabet set for the generate short id
 - Choose the length of the generate short id
-- Load existing short id <-> url mappings\*
-- Overwrite an existing short id with a different target url\*
+- Load existing short id <-> url mappings[^mappings]
+- Overwrite an existing short id with a different target url[^mappings]
 - Set a time to live on short ids (globally or per id)
 - Set a expiration date on short ids (globally or per id)
 - Set a request limit on short ids (globally or per id)
 - Set a redirect for the `/` path
 - Set a redirect url for exhausted ids (request limit reached)
 - Set a redirect url for expired ids (ttl/end date reached)
+- Set a inactive limit, for ids that will be resolved starting from a date in the future.
 - Backup/restore urls in csv or binary format
 - Import data via csv
 - Get statistics both globally and for short id
 
-\* the alphabet and lenght can be enforced
+[^mappings]: the alphabet and length can be enforced
+
+## Activation strategy
+
+By default an URL (short id) redirect is active from the moment of submission. It is possible to set the activation date and time of a redirect via the
+
+- Active from date
+
+Additionally an URL redirect that will be executed for requests received before the activation date.
 
 ## Expiration strategy
 
@@ -44,7 +53,7 @@ the value specified for the short id takes always precedence over the
 global configuration.
 
 For the _TTL_ and the _expiration date_ the actual expiration is selected as
-`max ( creation_date + ttl, expiration_date)`
+`max ( activation_date + ttl, expiration_date)`
 
 > !!! the expiration is set upon short id creation, changing global configuration
 > will not affect the short ids already set !!!
@@ -240,3 +249,7 @@ distill
   deal with stats
   deal with urls 
 
+
+
+
+Algorithm

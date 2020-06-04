@@ -81,17 +81,17 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// retrieve the forceAlphabet and forceLength
-	forceAlphabet, forceLenght := false, false
+	forceAlphabet, forceLength := false, false
 	fA := chi.URLParam(r, "forceAlphabet")
-	fL := chi.URLParam(r, "forceLenght")
+	fL := chi.URLParam(r, "forceLength")
 	if fA == "1" {
 		forceAlphabet = true
 	}
 	if fL == "1" {
-		forceLenght = true
+		forceLength = true
 	}
 	// upsert the data
-	id, err := distill.UpsertURL(urlReq, forceAlphabet, forceLenght, time.Now())
+	id, err := distill.UpsertURL(urlReq, forceAlphabet, forceLength)
 	log.Trace("created %v", id)
 	// TODO: check the actual error
 	if err != nil {
