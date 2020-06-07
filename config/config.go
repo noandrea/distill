@@ -24,14 +24,15 @@ type DatastoreConfig struct {
 
 //ShortIDConfig configuration for the short id
 type ShortIDConfig struct {
-	Alphabet             string    `yaml:"alphabet" mapstructure:"alphabet"`
-	Length               int       `yaml:"length" mapstructure:"length"`
-	MaxRequests          int64     `yaml:"max_requests" mapstructure:"max_requests"`
-	TTL                  int64     `yaml:"ttl" mapstructure:"ttl"`
-	ExpireOn             time.Time `yaml:"expire_on" mapstructure:"expire_on"`
-	RootRedirectURL      string    `yaml:"root_redirect_url" mapstructure:"root_redirect_url"`
-	ExpiredRedirectURL   string    `yaml:"expired_redirect_url" mapstructure:"expired_redirect_url"`
-	ExhaustedRedirectURL string    `yaml:"exhausted_redirect_url" mapstructure:"exhausted_redirect_url"`
+	Alphabet             string    `yaml:"alphabet" json:"alphabet" mapstructure:"alphabet"`
+	Length               int       `yaml:"length" json:"length" mapstructure:"length"`
+	MaxRequests          int64     `yaml:"max_requests" json:"max_requests" mapstructure:"max_requests"`
+	TTL                  int64     `yaml:"ttl" json:"ttl" mapstructure:"ttl"`
+	ExpireOn             time.Time `yaml:"expire_on" json:"expire_on" mapstructure:"expire_on"`
+	RootRedirectURL      string    `yaml:"root_redirect_url" json:"root_redirect_url" mapstructure:"root_redirect_url"`
+	ExpiredRedirectURL   string    `yaml:"expired_redirect_url" json:"expired_redirect_url" mapstructure:"expired_redirect_url"`
+	ExhaustedRedirectURL string    `yaml:"exhausted_redirect_url" json:"exhausted_redirect_url" mapstructure:"exhausted_redirect_url"`
+	InactiveRedirectURL  string    `yaml:"inactive_redirect_url" json:"inactive_redirect_url" mapstructure:"inactive_redirect_url"`
 }
 
 // TuningConfig fine tuning configuration
@@ -64,6 +65,8 @@ func Defaults() {
 	// for server
 	viper.SetDefault("server.host", "0.0.0.0")
 	viper.SetDefault("server.port", 1804)
+	viper.SetDefault("server.api_key", "secret")
+	viper.SetDefault("server.host_header", "Host")
 	// datastore
 	viper.SetDefault("datastore.name", "embed")
 	viper.SetDefault("datastore.uri", "distill.db")

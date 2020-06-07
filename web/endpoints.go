@@ -3,7 +3,9 @@ package web
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -18,6 +20,23 @@ import (
 var (
 	settings config.Schema
 )
+
+func getHost(r *http.Request) (host string, err error) {
+	host = r.Header.Get("X-Forwarded-Host")
+	if len(host) == 0 {
+		host = r.Host
+	}
+	// remove the port if present
+	if i := strings.Index(host, ":"); i >= 0 {
+		host = host[0:i]
+	}
+	log.Debug("Host  value:", host)
+	// check the length
+	if len(host) == 0 {
+		err = fmt.Errorf("host not found")
+	}
+	return
+}
 
 // RegisterEndpoints register application endpoints
 func RegisterEndpoints(cfg config.Schema) (router *chi.Mux) {
@@ -80,18 +99,13 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 		return
 	}
-	// retrieve the forceAlphabet and forceLength
-	forceAlphabet, forceLength := false, false
-	fA := chi.URLParam(r, "forceAlphabet")
-	fL := chi.URLParam(r, "forceLength")
-	if fA == "1" {
-		forceAlphabet = true
-	}
-	if fL == "1" {
-		forceLength = true
+	host, err := getHost(r)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
+		return
 	}
 	// upsert the data
-	id, err := distill.UpsertURL(urlReq, forceAlphabet, forceLength)
+	id, err := distill.UpsertURL(host, urlReq)
 	log.Trace("created %v", id)
 	// TODO: check the actual error
 	if err != nil {
@@ -103,7 +117,14 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 
 func handleGetURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	targetURL, err := distill.GetURLRedirect(shortID)
+	// retrieve the host
+	host, err := getHost(r)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
+		return
+	}
+	//
+	targetURL, err := distill.GetURLRedirect(host, shortID)
 	if err != nil && len(targetURL) == 0 {
 		http.Error(w, "URL not found", 404)
 	}
@@ -118,7 +139,13 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 func handleStatsURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	if urlInfo, err := distill.GetURLInfo(shortID); err == nil {
+	// retrieve the host
+	host, err := getHost(r)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
+		return
+	}
+	if urlInfo, err := distill.GetURLInfo(host, shortID); err == nil {
 		// send redirect
 		render.JSON(w, r, urlInfo)
 		return
@@ -141,7 +168,13 @@ func handleResetStats(w http.ResponseWriter, r *http.Request) {
 
 func handleDeleteURL(w http.ResponseWriter, r *http.Request) {
 	shortID := chi.URLParam(r, "ID")
-	err := distill.DeleteURL(shortID)
+	// retrieve the host
+	host, err := getHost(r)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
+		return
+	}
+	err = distill.DeleteURL(host, shortID)
 	if err != nil {
 		render.Render(w, r, ErrNotFound(err, "URL id not found"))
 		return

@@ -5,7 +5,6 @@ import (
 
 	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/model"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var (
@@ -15,8 +14,8 @@ var (
 // URLDatastore implements the datastore for the short urls
 type URLDatastore interface {
 	// for general data
-	Put(key string, data protoreflect.ProtoMessage) error
-	Get(key string, data protoreflect.ProtoMessage) (bool, error)
+	Put(key string, data interface{}) error
+	Get(key string, data interface{}) (bool, error)
 	// for counters
 	CounterSet(key string) (err error)
 	CounterGet(key string) (val int, err error)

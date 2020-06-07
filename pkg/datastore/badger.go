@@ -9,8 +9,7 @@ import (
 	"github.com/noandrea/distill/pkg/common"
 	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
+	"github.com/vmihailenco/msgpack"
 )
 
 type EmbedStore struct {
@@ -44,11 +43,11 @@ func (es *EmbedStore) Close() {
 	es.db.Close()
 }
 
-// Put store arbitrary data (overwrite existing)
-func (es *EmbedStore) Put(key string, data protoreflect.ProtoMessage) (err error) {
+// Put store arbitrary data (serialized in json)
+func (es *EmbedStore) Put(key string, data interface{}) (err error) {
 	err = es.db.Update(func(txn *badger.Txn) (err error) {
 		// marshal and store the data
-		v, err := proto.Marshal(data)
+		v, err := msgpack.Marshal(&data)
 		if err != nil {
 			return
 		}
@@ -58,14 +57,14 @@ func (es *EmbedStore) Put(key string, data protoreflect.ProtoMessage) (err error
 }
 
 // Get get existing data
-func (es *EmbedStore) Get(key string, data protoreflect.ProtoMessage) (found bool, err error) {
+func (es *EmbedStore) Get(key string, data interface{}) (found bool, err error) {
 	err = es.db.View(func(txn *badger.Txn) (err error) {
 		v, err := dbGet(txn, []byte(key))
 		if err != nil {
 			return
 		}
 		found = true
-		err = proto.Unmarshal(v, data)
+		err = msgpack.Unmarshal(v, data)
 		return
 	})
 	return
@@ -102,14 +101,14 @@ func (es *EmbedStore) Hit(key string) (u model.URLInfo, err error) {
 			return
 		}
 		// unmarshal the result
-		err = proto.Unmarshal(v, &u)
+		err = msgpack.Unmarshal(v, &u)
 		if err != nil {
 			return
 		}
 		// update the Hit counter
 		u.Hits++
 		// marshal the update
-		data, err := proto.Marshal(&u)
+		data, err := msgpack.Marshal(&u)
 		if err != nil {
 			return
 		}
@@ -127,7 +126,7 @@ func (es *EmbedStore) Peek(key string) (u model.URLInfo, err error) {
 		if err != nil {
 			return
 		}
-		err = proto.Unmarshal(v, &u)
+		err = msgpack.Unmarshal(v, &u)
 		return
 	})
 	return
@@ -142,7 +141,7 @@ func (es *EmbedStore) Insert(key string, u *model.URLInfo) (err error) {
 			err = fmt.Errorf("duplicated key %s", key)
 			return
 		}
-		v, err := proto.Marshal(u)
+		v, err := msgpack.Marshal(u)
 		if err != nil {
 			return
 		}
@@ -156,7 +155,7 @@ func (es *EmbedStore) Insert(key string, u *model.URLInfo) (err error) {
 func (es *EmbedStore) Upsert(key string, u *model.URLInfo) (err error) {
 	err = es.db.Update(func(txn *badger.Txn) (err error) {
 		k := []byte(key)
-		v, err := proto.Marshal(u)
+		v, err := msgpack.Marshal(u)
 		if err != nil {
 			return
 		}

@@ -1,6 +1,7 @@
 package distill
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"strings"
@@ -12,6 +13,11 @@ import (
 	"github.com/noandrea/distill/pkg/datastore"
 	"github.com/noandrea/distill/pkg/model"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
+)
+
+const (
+	configID = "//cfg//"
 )
 
 var (
@@ -34,6 +40,26 @@ func generateID(alphabet string, length int) (shortID string) {
 		log.Warn("generateID: error generating IDs", err)
 	}
 	return
+}
+
+// Hash calculate the hash of a string
+func Hash(data ...interface{}) string {
+	hash := blake2b.Sum256([]byte(fmt.Sprint(data...)))
+	return hex.EncodeToString(hash[:])
+}
+
+// ShortHash calculate the hash of a string (10c)
+func ShortHash(data ...string) string {
+	hash := blake2b.Sum256([]byte(strings.Join(data, "")))
+	return hex.EncodeToString(hash[0:16])
+}
+
+func genKey(tenant, id string) string {
+	th := blake2b.Sum256([]byte(tenant))
+	// k := append([]byte, th[0:16]..., []byte(id))
+	//return k
+	return fmt.Sprint(hex.EncodeToString(th[0:16]), ":", id)
+
 }
 
 func validateURL(url *string, allowEmpty bool) (err error) {
@@ -69,7 +95,7 @@ func calculateExpiration(activeFrom time.Time, ttl int64, expiresOn time.Time) (
 	return
 }
 
-func buildURLInfo(url *model.URLReq, shortIDAlphabet string, shortIDLength int) (u *model.URLInfo, err error) {
+func buildURLInfo(url *model.URLReq, cfg config.ShortIDConfig) (u *model.URLInfo, err error) {
 	u = model.URLInfoFromURLReq(*url)
 	// preprocess the url and generates the id if necessary
 	// check that the target url is a valid url
@@ -94,43 +120,24 @@ func buildURLInfo(url *model.URLReq, shortIDAlphabet string, shortIDLength int) 
 	}
 
 	// check if the ID is set
-	u.Id = strings.TrimSpace(u.Id)
-	if len(u.Id) == 0 {
-		u.Id = generateID(shortIDAlphabet, shortIDLength)
+	u.ID = strings.TrimSpace(u.ID)
+	if len(u.ID) == 0 {
+		u.ID = generateID(cfg.Alphabet, cfg.Length)
 	}
-	// } else {
-	// 	// TODO: check longest allowed key in badger
-	// 	p := fmt.Sprintf("[^%s]", regexp.QuoteMeta(settings.ShortID.Alphabet))
-	// 	m, _ := regexp.MatchString(p, url.ID)
-	// 	if forceAlphabet && m {
-	// 		err = fmt.Errorf("ID %v doesn't match alphabet and forceAlphabet is active", url.ID)
-	// 		return "", err
-	// 	}
-	// 	if forceLength && len(url.ID) != settings.ShortID.Length {
-	// 		err = fmt.Errorf("ID %v doesn't match length and forceLength len %v, required %v", url.ID, len(url.ID), settings.ShortID.Length)
-	// 		return "", err
-	// 	}
-	// }
 
 	// TODO: normalize urls
 
 	// work with expiration times
 	// compute the active from date
-	activeFrom := common.ProtoTime(u.ActiveFrom)
-	recordedOn := common.ProtoTime(u.RecordedOn)
-	if activeFrom.Before(recordedOn) {
-		activeFrom := recordedOn
-		u.ActiveFrom = common.TimeProto(activeFrom)
+	if u.ActiveFrom.Before(u.RecordedOn) {
+		u.ActiveFrom = u.RecordedOn
 	}
 	// compute the expiration date
-	ttl := u.TTL
-	expiresOn := common.ProtoTime(u.ExpiresOn)
-	expiresOn, err = calculateExpiration(activeFrom, ttl, expiresOn)
+	u.ExpiresOn, err = calculateExpiration(u.ActiveFrom, u.TTL, u.ExpiresOn)
 	if err != nil {
 		log.Error("Error calculating expiration:", err)
 		return
 	}
-	u.ExpiresOn = common.TimeProto(expiresOn)
 
 	// set max requests, the local version always has priority
 	if u.ResolveLimit == 0 {
@@ -141,87 +148,95 @@ func buildURLInfo(url *model.URLReq, shortIDAlphabet string, shortIDLength int) 
 
 // UpsertURLSimple insert or update an url
 // shortcut for UpsertURL(true, true, time.Now())
-func UpsertURLSimple(url *model.URLReq) (id string, err error) {
-	return UpsertURL(url, true, true)
+func UpsertURLSimple(tenant string, url *model.URLReq) (id string, err error) {
+	return UpsertURL(tenant, url)
 }
 
 // UpsertURL insert or udpdate a url mapping
-func UpsertURL(url *model.URLReq, forceAlphabet, forceLength bool) (id string, err error) {
-	u, err := buildURLInfo(url, settings.ShortID.Alphabet, settings.ShortID.Length)
-	if err = ds.Upsert(id, u); err != nil {
+func UpsertURL(tenant string, url *model.URLReq) (id string, err error) {
+	log.Debug("UpsertURL for tenant: ", tenant)
+	// retrieve the configuration
+	cfgKey := genKey(tenant, configID)
+	cfg := settings.ShortID
+	if found, _ := ds.Get(cfgKey, &cfg); found {
+		log.Debug("Loading local settings for ", tenant)
+	}
+	// TODO: add hard cap counter for number of requests allowed
+	// build the URLInfo object
+	u, err := buildURLInfo(url, cfg)
+	// compute key
+	k := genKey(tenant, u.ID)
+	// store the result
+	if err = ds.Upsert(k, u); err != nil {
 		log.Error("Error inserting new id: ", err)
 		return
 	}
-	id = u.Id
-	// collect statistics
-	datastore.PushEvent(&model.URLOp{
-		Opcode: model.OpcodeInsert,
-		ID:     id,
-		Err:    err,
-	})
+	id = u.ID
+	//TODO: collect statistics
 	return
 }
 
 // DeleteURL delete a url mapping
-func DeleteURL(id string) (err error) {
-	err = ds.Delete(id)
+func DeleteURL(tenant, id string) (err error) {
+	k := genKey(tenant, id)
+	err = ds.Delete(k)
 	if err != nil {
 		return
 	}
-	// collect statistics
-	datastore.PushEvent(&model.URLOp{
-		Opcode: model.OpcodeDelete,
-		ID:     id,
-	})
+	//TODO: collect statistics
 	return
 }
 
 // GetURLRedirect retrieve the redirect url associated to an id
 // it also fire an event of type opcodeGet
-func GetURLRedirect(id string) (redirectURL string, err error) {
+func GetURLRedirect(tenant string, id string) (redirectURL string, err error) {
+	// retrieve the configuration
+	cfgKey := genKey(tenant, configID)
+	cfg := settings.ShortID
+	if found, _ := ds.Get(cfgKey, &cfg); found {
+		log.Debug("Loading local settings for ", tenant)
+	}
 	// urlInfo
-	u, err := ds.Hit(id)
+	k := genKey(tenant, id)
+	u, err := ds.Hit(k)
 	if err != nil {
 		return
 	}
 
-	urlop := &model.URLOp{ID: u.Id}
-
-	idExpiration := common.ProtoTime(u.ExpiresOn)
-
+	// TODO: test active from
+	// test for expiration
+	idExpiration := u.ExpiresOn
 	if !idExpiration.IsZero() && time.Now().After(idExpiration) {
-		log.Debugf("Expire date for %v, limit %v, requests %v", u.Id, u.Hits, u.ResolveLimit)
+		log.Debugf("Expire date for %v, limit %v, requests %v", u.ID, u.Hits, u.ResolveLimit)
 		err = model.ErrURLExpired
-		redirectURL = common.IfEmptyThen(u.ExpiredRedirectURL, settings.ShortID.ExpiredRedirectURL)
-
-		urlop.Err, urlop.Opcode = err, model.OpcodeExpired
-		datastore.PushEvent(urlop)
+		redirectURL = common.IfEmptyThen(u.ExpiredRedirectURL, cfg.ExpiredRedirectURL)
+		//TODO: collect statistics
 		return
 	}
+	// test for limits
 	if u.ResolveLimit > 0 && u.Hits > u.ResolveLimit {
 		log.Tracef("Expire max request for %v, limit %v, requests %v",
-			u.Id,
+			u.ID,
 			u.Hits,
 			u.ResolveLimit)
 		err = model.ErrURLExhausted
-		redirectURL = common.IfEmptyThen(u.ExhaustedRedirectURL, settings.ShortID.ExhaustedRedirectURL)
+		redirectURL = common.IfEmptyThen(u.ExhaustedRedirectURL, cfg.ExhaustedRedirectURL)
 		// push event
-		urlop.Err, urlop.Opcode = err, model.OpcodeExpired
-		datastore.PushEvent(urlop)
+		//TODO: collect statistics
 		return
 	}
 
-	// collect statistics
-	urlop.Err, urlop.Opcode = err, model.OpcodeGet
-	datastore.PushEvent(urlop)
+	//TODO: collect statistics
+
 	// return the redirectUrl
 	redirectURL = u.RedirectURL
 	return
 }
 
 // GetURLInfo retrieve the url info associated to an id
-func GetURLInfo(id string) (u model.URLInfo, err error) {
-	u, err = ds.Peek(id)
+func GetURLInfo(tenant, id string) (u model.URLInfo, err error) {
+	k := genKey(tenant, id)
+	u, err = ds.Peek(k)
 	return
 }
 

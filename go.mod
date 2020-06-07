@@ -10,6 +10,7 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-chi/chi v4.1.1+incompatible
+	github.com/go-chi/docgen v1.0.5
 	github.com/go-chi/render v1.0.1
 	github.com/golang/protobuf v1.4.2
 	github.com/jbrodriguez/mlog v0.0.0-20180805173533-cbd5ae8e9c53
@@ -26,7 +27,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
+	github.com/vmihailenco/msgpack v4.0.4+incompatible
+	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 	golang.org/x/net v0.0.0-20200513185701-a91f0712d120 // indirect
 	golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9 // indirect
 	google.golang.org/protobuf v1.23.0

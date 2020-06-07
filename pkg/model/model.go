@@ -29,37 +29,43 @@ var (
 	NumberZero = common.Itoa(0)
 )
 
-func (u URLInfo) GetExpirationTime() time.Time {
-	return common.ProtoTime(u.ExpiresOn)
-}
-
-func (u *URLInfo) SetExpirationTime(t time.Time) {
-	u.ExpiresOn = common.TimeProto(t)
-}
-
 // NewURLInfo create a new URLInfo
 func NewURLInfo(ID, redirectURL string) *URLInfo {
 	return &URLInfo{
-		Id:          ID,
+		ID:          ID,
 		RedirectURL: redirectURL,
-		RecordedOn:  common.TimeProto(time.Now()),
+		RecordedOn:  time.Now(),
 	}
 }
 
 // URLInfoFromURLReq copy fields from URLReq to URLInfo
 func URLInfoFromURLReq(r URLReq) (u *URLInfo) {
 	return &URLInfo{
-		Id:                   r.ID,
+		ID:                   r.ID,
 		RedirectURL:          r.RedirectURL,
-		RecordedOn:           common.TimeProto(time.Now()),
+		RecordedOn:           time.Now(),
 		ExhaustedRedirectURL: r.ExhaustedRedirectURL,
 		ExpiredRedirectURL:   r.ExpiredRedirectURL,
 		InactiveRedirectURL:  r.InactiveRedirectURL,
 		TTL:                  r.TTL,
 		ResolveLimit:         r.ResolveLimit,
-		ExpiresOn:            common.TimeProto(r.ExpiresOn),
-		ActiveFrom:           common.TimeProto(r.ActiveFrom),
+		ExpiresOn:            r.ExpiresOn,
+		ActiveFrom:           r.ActiveFrom,
 	}
+}
+
+type URLInfo struct {
+	ID                   string    `json:"id,omitempty"`
+	RedirectURL          string    `json:"redirectURL,omitempty"`
+	Hits                 int64     `json:"hits,omitempty"`
+	RecordedOn           time.Time `json:"recordedOn,omitempty"`
+	ActiveFrom           time.Time `json:"activeFrom,omitempty"`
+	ExpiresOn            time.Time `json:"expiresOn,omitempty"`
+	ResolveLimit         int64     `json:"resolveLimit,omitempty"`
+	TTL                  int64     `json:"TTL,omitempty"`
+	ExpiredRedirectURL   string    `json:"expiredRedirectURL,omitempty"`
+	ExhaustedRedirectURL string    `json:"exhaustedRedirectURL,omitempty"`
+	InactiveRedirectURL  string    `json:"inactiveRedirectURL,omitempty"`
 }
 
 // BinSerializable interface for binary serializable structs
@@ -134,8 +140,7 @@ func (s *Statistics) Record(get, upsert, delete, urls, getExpired int64) {
 
 // ExpirationDate return the expiration date of the URLInfo
 func (u URLInfo) ExpirationDate() time.Time {
-	t := common.ProtoTime(u.ActiveFrom)
-	return t.Add(time.Duration(u.TTL) * time.Second)
+	return u.ActiveFrom.Add(time.Duration(u.TTL) * time.Second)
 }
 
 // // String version of urlinfo
