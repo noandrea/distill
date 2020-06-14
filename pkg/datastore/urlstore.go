@@ -19,8 +19,8 @@ type URLDatastore interface {
 	Put(key string, data interface{}) error
 	Get(key string, data interface{}) (bool, error)
 	// for counters
-	CounterSet(key string) (err error)
-	CounterGet(key string) (val int, err error)
+	CounterSet(key string, val int64) (err error)
+	CounterGet(key string) (val int64, err error)
 	CounterPlus(key string) (err error)
 	CounterMinus(key string) (err error)
 	// for URLs

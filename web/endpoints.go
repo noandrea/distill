@@ -106,7 +106,7 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 	}
 	// upsert the data
 	id, err := distill.UpsertURL(host, urlReq)
-	log.Trace("created %v", id)
+	log.Trace("created:", id)
 	// TODO: check the actual error
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
