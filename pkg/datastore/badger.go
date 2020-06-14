@@ -337,16 +337,6 @@ func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
 	}
 }
 
-func dbSetBin(txn *badger.Txn, k []byte, val model.BinSerializable) (err error) {
-	binData, err := val.MarshalBinary()
-	if err != nil {
-		return
-	}
-	err = txn.Set(k, binData)
-	log.Trace("dbSetBin write:", k)
-	return
-}
-
 // dbGet retrieve the value of a key
 // ErrKeyNotFound is returned if the key is not found
 func dbGet(txn *badger.Txn, k []byte) (val []byte, err error) {

@@ -70,18 +70,6 @@ type URLInfo struct {
 	InactiveRedirectURL  string    `json:"inactiveRedirectURL,omitempty"`
 }
 
-// BinSerializable interface for binary serializable structs
-type BinSerializable interface {
-	MarshalBinary() (data []byte, err error)
-	UnmarshalBinary(data []byte) error
-}
-
-// CSVSerializable interface for binary serializable structs
-type CSVSerializable interface {
-	MarshalRecord() (data []string, err error)
-	UnmarshalRecord(data []string) error
-}
-
 // URLOp to track events on urls
 type URLOp struct {
 	Opcode int
@@ -145,17 +133,6 @@ func (u URLInfo) ExpirationDate() time.Time {
 	return u.ActiveFrom.Add(time.Duration(u.TTL) * time.Second)
 }
 
-// // String version of urlinfo
-// func (u URLInfo) String() string {
-// 	//return fmt.Sprint("%#v", u)
-// 	return fmt.Sprintf("%v c:%d %v [mr:%d, exp:%v] --> %v",
-// 		u.Id, u.Hits,
-// 		common.ProtoTime(u.ActiveFrom).Format(time.Stamp),
-// 		u.ResolveLimit,
-// 		common.ProtoTime(u.ActiveFrom).Format(time.RFC3339Nano),
-// 		u.RedirectURL)
-// }
-
 // Bind will run after the unmarshalling is complete
 func (u *URLReq) Bind(r *http.Request) error {
 	return nil
@@ -173,68 +150,6 @@ func (u *ShortID) Bind(r *http.Request) error {
 // //  \ `.___.'\| \____) |   \ ' /
 // //   `.____ .' \______.'    \_/
 // //
-
-// //MarshalRecord marshal a urlinfo to a string array (for csv)
-// func (u *URLInfo) MarshalRecord() []string {
-// 	pieces := make([]string, 9)
-// 	pieces[0] = u.Id
-// 	pieces[1] = u.RedirectURL
-// 	pieces[2] = fTime(common.ProtoTime(u.RecordedOn))
-// 	pieces[3] = fUint64(u.Hits)
-// 	pieces[4] = fUint64(u.ResolveLimit)
-// 	pieces[5] = u.ExhaustedRedirectURL
-// 	pieces[6] = fUint64(u.TTL)
-// 	pieces[7] = fTime(common.ProtoTime(u.ExpiresOn))
-// 	pieces[8] = u.ExpiredRedirectURL
-// 	return pieces
-// }
-
-// //UnmarshalRecord unmarshal a string array into a urlinfo
-// func (u *URLInfo) UnmarshalRecord(pieces []string) (err error) {
-// 	pl := len(pieces)
-// 	if pl != 9 {
-// 		return fmt.Errorf("Invalid backup record! record corrupted")
-// 	}
-// 	u.Id = pieces[0]
-// 	u.RedirectURL = pieces[1]
-// 	if u.BountAt, err = protoTime(pieces, 2, pl); err != nil {
-// 		return
-// 	}
-// 	if u.Counter, err = pUint64(pieces, 3, pl); err != nil {
-// 		return
-// 	}
-// 	if u.MaxRequests, err = pUint64(pieces, 4, pl); err != nil {
-// 		return
-// 	}
-// 	u.ExhaustedURL = pieces[5]
-// 	if u.TTL, err = pUint64(pieces, 6, pl); err != nil {
-// 		return
-// 	}
-// 	if u.BountAt, err = protoTime(pieces, 7, pl); err != nil {
-// 		return
-// 	}
-// 	u.ExpiredURL = pieces[8]
-// 	return
-// }
-
-// //UnmarshalRecord unmarshal a string array (csv record) to URLReq pointer
-// func (u *URLReq) UnmarshalRecord(pieces []string) (err error) {
-// 	u.URL = pieces[0]
-// 	p := len(pieces)
-// 	if p > 1 {
-// 		u.ID = pieces[1]
-// 	}
-// 	if u.MaxRequests, err = pUint64(pieces, 2, p); err != nil {
-// 		return
-// 	}
-// 	if u.TTL, err = pUint64(pieces, 3, p); err != nil {
-// 		return
-// 	}
-// 	if u.ExpireOn, err = protoTime(pieces, 4, p); err != nil {
-// 		return
-// 	}
-// 	return
-// }
 
 // OpcodeToString opcode to sting
 func OpcodeToString(opcode int) (label string) {
@@ -260,10 +175,13 @@ func OpcodeToString(opcode int) (label string) {
 //
 
 // ErrURLExpired when url is expired
-var ErrURLExpired = fmt.Errorf("url expired")
+var ErrURLExpired = fmt.Errorf("URL expired")
+
+// ErrURLInactive when url is inactive
+var ErrURLInactive = fmt.Errorf("URL expired")
 
 // ErrURLExhausted when url is expired
-var ErrURLExhausted = fmt.Errorf("url exhausted")
+var ErrURLExhausted = fmt.Errorf("URL exhausted")
 
 // ErrInvalidBackupRecord when a csv record from backup is different from expected
 var ErrInvalidBackupRecord = fmt.Errorf("Invalid backup record")
