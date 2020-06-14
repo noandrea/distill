@@ -174,3 +174,11 @@ func Itoa(i uint64) (b []byte) {
 func Atoi(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
 }
+
+// Min return the min betweek numbers
+func Min(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}

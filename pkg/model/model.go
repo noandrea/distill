@@ -54,6 +54,7 @@ func URLInfoFromURLReq(r URLReq) (u *URLInfo) {
 	}
 }
 
+// URLInfo main entity to store
 type URLInfo struct {
 	ID                   string    `json:"id,omitempty"`
 	RedirectURL          string    `json:"redirectURL,omitempty"`
@@ -61,6 +62,7 @@ type URLInfo struct {
 	RecordedOn           time.Time `json:"recordedOn,omitempty"`
 	ActiveFrom           time.Time `json:"activeFrom,omitempty"`
 	ExpiresOn            time.Time `json:"expiresOn,omitempty"`
+	ResolveCount         int64     `json:"resolveCount,omitempty"`
 	ResolveLimit         int64     `json:"resolveLimit,omitempty"`
 	TTL                  int64     `json:"TTL,omitempty"`
 	ExpiredRedirectURL   string    `json:"expiredRedirectURL,omitempty"`

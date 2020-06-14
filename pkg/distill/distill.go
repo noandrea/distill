@@ -203,7 +203,14 @@ func GetURLRedirect(tenant string, id string) (redirectURL string, err error) {
 		return
 	}
 
-	// TODO: test active from
+	// test for inactive
+	if u.ActiveFrom.Before(time.Now()) {
+		log.Debugf("Inactive date for %v, limit %v, requests %v", u.ID, u.Hits, u.ResolveLimit)
+		err = model.ErrURLExpired
+		redirectURL = common.IfEmptyThen(u.InactiveRedirectURL, cfg.InactiveRedirectURL)
+		//TODO: collect statistics
+		return
+	}
 	// test for expiration
 	idExpiration := u.ExpiresOn
 	if !idExpiration.IsZero() && time.Now().After(idExpiration) {
@@ -214,7 +221,7 @@ func GetURLRedirect(tenant string, id string) (redirectURL string, err error) {
 		return
 	}
 	// test for limits
-	if u.ResolveLimit > 0 && u.Hits > u.ResolveLimit {
+	if u.ResolveLimit > 0 && u.ResolveCount > u.ResolveLimit {
 		log.Tracef("Expire max request for %v, limit %v, requests %v",
 			u.ID,
 			u.Hits,

@@ -2,8 +2,10 @@ package datastore
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/noandrea/distill/config"
+	"github.com/noandrea/distill/pkg/common"
 	"github.com/noandrea/distill/pkg/model"
 )
 
@@ -43,4 +45,18 @@ func key(prefix byte, id string) (k []byte, err error) {
 	k[0] = prefix
 	copy(k[1:], idb)
 	return
+}
+
+// UpdateCounters on retrieval from storage
+func UpdateCounters(u *model.URLInfo) {
+	// increase hit counter
+	u.Hits++
+	// deal with counter
+	now := time.Now()
+	if now.After(u.ActiveFrom) && now.Before(u.ExpiresOn) {
+		if u.ResolveLimit > 0 {
+			u.ResolveCount = common.Min(u.ResolveCount, u.ResolveLimit)
+		}
+		u.ResolveCount++
+	}
 }

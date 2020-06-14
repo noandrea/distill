@@ -105,8 +105,11 @@ func (es *EmbedStore) Hit(key string) (u model.URLInfo, err error) {
 		if err != nil {
 			return
 		}
-		// update the Hit counter
-		u.Hits++
+		// this is ugly, the problem is to update
+		// correctly the counters for inactive urls
+		// this should be used by every implementation
+		// for the storage
+		UpdateCounters(&u)
 		// marshal the update
 		data, err := msgpack.Marshal(&u)
 		if err != nil {
