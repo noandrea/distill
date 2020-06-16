@@ -99,6 +99,9 @@ func handleShort(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))
 		return
 	}
+	// set the request time
+	urlReq.ReceivedOn = time.Now()
+	// read the hostname
 	host, err := getHost(r)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err, err.Error()))

@@ -3,6 +3,7 @@ package distill
 import (
 	"encoding/hex"
 	"fmt"
+	"net/url"
 
 	"strings"
 	"time"
@@ -48,25 +49,29 @@ func genKey(tenant, id string) string {
 
 }
 
-func validateURL(url *string, allowEmpty bool) (err error) {
-	if len(strings.TrimSpace(*url)) == 0 && allowEmpty {
+func validateURL(u *string, allowEmpty bool) (err error) {
+	if len(strings.TrimSpace(*u)) == 0 && allowEmpty {
 		return
 	}
-	// normalize url
-	nu, err := purell.NormalizeURLString(*url,
-		purell.FlagLowercaseScheme|
-			purell.FlagLowercaseHost|purell.FlagUppercaseEscapes)
+	urlS, err := url.Parse(*u)
 	if err != nil {
-		log.Error(err)
 		return
 	}
-	url = &nu
+	if len(urlS.Host) == 0 {
+		err = fmt.Errorf("Empty hostname in URL")
+		return
+	}
+	*u = urlS.String()
 	return
 }
 
 // calculateExpiration calculate the expiration of a url
 // returns the highest date between the date binding + ttl and the date expiration date
 func calculateExpiration(activeFrom time.Time, ttl int64, expiresOn time.Time) (expirationDate time.Time, err error) {
+	if ttl == 0 && expiresOn.IsZero() {
+		expirationDate = expiresOn
+		return
+	}
 	// add the ttl
 	expirationDate = activeFrom.Add(time.Duration(ttl) * time.Second)
 	// check if the dates make sense

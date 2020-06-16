@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/noandrea/distill/config"
+	"github.com/noandrea/distill/pkg/model"
 )
 
 // func _defaultConfig() (settings config.Schema) {
@@ -296,6 +297,144 @@ func Test_calculateExpiration(t *testing.T) {
 			}
 			if !reflect.DeepEqual(gotExpirationDate, tt.wantExpirationDate) {
 				t.Errorf("calculateExpiration() = %v, want %v", gotExpirationDate, tt.wantExpirationDate)
+			}
+		})
+	}
+}
+
+func Test_buildURLInfo(t *testing.T) {
+
+	now := time.Now()
+
+	type args struct {
+		url *model.URLReq
+		cfg config.ShortIDConfig
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantU   *model.URLInfo
+		wantErr bool
+	}{
+		{
+			"ok",
+			args{
+				&model.URLReq{
+					ID:          "abc",
+					RedirectURL: "http://distill.plus",
+					ReceivedOn:  now,
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{
+				ID:          "abc",
+				RedirectURL: "http://distill.plus",
+				RecordedOn:  now,
+				ActiveFrom:  now,
+			},
+			false,
+		},
+		{
+			"invalid redirect url",
+			args{
+				&model.URLReq{
+					ID:          "abc",
+					RedirectURL: "",
+					ReceivedOn:  now,
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{
+				ID:          "abc",
+				RedirectURL: "http://distill.plus",
+				RecordedOn:  now,
+				ActiveFrom:  now,
+			},
+			true,
+		},
+		{
+			"missing scheme",
+			args{
+				&model.URLReq{
+					ID:          "abc",
+					RedirectURL: "distill.plus",
+					ReceivedOn:  now,
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{},
+			true,
+		},
+		{
+			"wrong exhausted",
+			args{
+				&model.URLReq{
+					ID:                   "abc",
+					RedirectURL:          "https://distill.plus",
+					ReceivedOn:           now,
+					ExhaustedRedirectURL: "distill.plus/exhausted",
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{},
+			true,
+		},
+		{
+			"wrong expired",
+			args{
+				&model.URLReq{
+					ID:                 "abc",
+					RedirectURL:        "https://distill.plus",
+					ReceivedOn:         now,
+					ExpiredRedirectURL: "distill.plus/expired",
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{},
+			true,
+		},
+		{
+			"wrong inactive",
+			args{
+				&model.URLReq{
+					ID:                  "abc",
+					RedirectURL:         "https://distill.plus",
+					ReceivedOn:          now,
+					InactiveRedirectURL: "distill.plus/inactive",
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotU, err := buildURLInfo(tt.args.url, tt.args.cfg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("buildURLInfo() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil && !reflect.DeepEqual(gotU, tt.wantU) {
+				t.Errorf("buildURLInfo() = \n %#v, \nwant \n%#v", gotU, tt.wantU)
 			}
 		})
 	}

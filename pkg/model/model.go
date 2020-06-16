@@ -43,7 +43,7 @@ func URLInfoFromURLReq(r URLReq) (u *URLInfo) {
 	return &URLInfo{
 		ID:                   r.ID,
 		RedirectURL:          r.RedirectURL,
-		RecordedOn:           time.Now(),
+		RecordedOn:           r.ReceivedOn,
 		ExhaustedRedirectURL: r.ExhaustedRedirectURL,
 		ExpiredRedirectURL:   r.ExpiredRedirectURL,
 		InactiveRedirectURL:  r.InactiveRedirectURL,
@@ -85,6 +85,7 @@ type ShortID struct {
 // URLReq request from a client to register an url
 type URLReq struct {
 	ID                   string    `json:"id"`
+	ReceivedOn           time.Time `json:"received_on,omitempty"`
 	RedirectURL          string    `json:"redirect_url"`
 	ResolveLimit         int64     `json:"max_requests,omitempty"`
 	TTL                  int64     `json:"ttl,omitempty"`
