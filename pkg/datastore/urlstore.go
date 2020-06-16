@@ -1,7 +1,6 @@
 package datastore
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/noandrea/distill/config"
@@ -32,19 +31,6 @@ type URLDatastore interface {
 	// TODO: Backup the database as csv
 	// Backup(outFile string) error
 	// Restore(inFile string) (int, error)
-}
-
-func key(prefix byte, id string) (k []byte, err error) {
-	idb := []byte(id)
-	idbl := len(idb)
-	if idbl == 0 {
-		err = fmt.Errorf("Empty id not allowed")
-		return
-	}
-	k = make([]byte, len(idb)+1)
-	k[0] = prefix
-	copy(k[1:], idb)
-	return
 }
 
 // UpdateCounters on retrieval from storage

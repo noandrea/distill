@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/purell"
 	"github.com/noandrea/distill/config"
 	"github.com/noandrea/distill/pkg/common"
 	"github.com/noandrea/distill/pkg/datastore"
@@ -42,22 +41,9 @@ func generateID(alphabet string, length int) (shortID string) {
 	return
 }
 
-// Hash calculate the hash of a string
-func Hash(data ...interface{}) string {
-	hash := blake2b.Sum256([]byte(fmt.Sprint(data...)))
-	return hex.EncodeToString(hash[:])
-}
-
-// ShortHash calculate the hash of a string (10c)
-func ShortHash(data ...string) string {
-	hash := blake2b.Sum256([]byte(strings.Join(data, "")))
-	return hex.EncodeToString(hash[0:16])
-}
-
 func genKey(tenant, id string) string {
 	th := blake2b.Sum256([]byte(tenant))
 	// k := append([]byte, th[0:16]..., []byte(id))
-	//return k
 	return fmt.Sprint(hex.EncodeToString(th[0:16]), ":", id)
 
 }
@@ -244,45 +230,5 @@ func GetURLRedirect(tenant string, id string) (redirectURL string, err error) {
 func GetURLInfo(tenant, id string) (u model.URLInfo, err error) {
 	k := genKey(tenant, id)
 	u, err = ds.Peek(k)
-	return
-}
-
-// ImportCSV import urls from a csv file
-func ImportCSV(inFile string) (rows int, err error) {
-	// fp, err := os.Open(inFile)
-	// if err != nil {
-	// 	return
-	// }
-	// defer fp.Close()
-	// start := time.Now()
-	// csvR := csv.NewReader(fp)
-	// for {
-	// 	record, err := csvR.Read()
-	// 	if err == io.EOF {
-	// 		log.Error(err)
-	// 		break
-	// 	}
-	// 	if err != nil {
-	// 		log.Error(err)
-	// 		break
-	// 	}
-	// 	if rows == 0 && common.IsEqStr(record[0], "url") {
-	// 		// header, skip
-	// 		continue
-	// 	}
-	// 	u := &model.URLReq{}
-	// 	err = u.UnmarshalRecord(record)
-	// 	if err != nil {
-	// 		log.Error(err)
-	// 		break
-	// 	}
-	// 	_, err = UpsertURL(u, false, false, time.Now())
-	// 	if err != nil {
-	// 		log.Error(err)
-	// 		break
-	// 	}
-	// 	rows++
-	// }
-	// log.Infof("Import complete with %d rows in %s", rows, time.Since(start))
 	return
 }
