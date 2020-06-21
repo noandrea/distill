@@ -1,6 +1,7 @@
 package common
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -24,34 +25,6 @@ func TestIsEmptyStr(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsEmptyStr(tt.s); got != tt.want {
 				t.Errorf("IsEmptyStr() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDefaultIfEmptyStr(t *testing.T) {
-	type args struct {
-		s        string
-		defaultS string
-	}
-	tests := []struct {
-		name        string
-		args        args
-		wantDefault bool
-	}{
-		{"no default", args{"foo", "bar"}, false},
-		{"yes default", args{"", "bar"}, true},
-		{"yes default", args{"\t\t", "bar"}, true},
-		{"yes default", args{"\ta\t", "bar"}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			DefaultIfEmptyStr(&tt.args.s, tt.args.defaultS)
-			if tt.wantDefault && tt.args.s != tt.args.defaultS {
-				t.Errorf("DefaultIfEmptyStr expected %v got %v", tt.args.defaultS, tt.args.s)
-			}
-			if !tt.wantDefault && tt.args.s == tt.args.defaultS {
-				t.Errorf("DefaultIfEmptyStr expected %v got %v", tt.args.s, tt.args.defaultS)
 			}
 		})
 	}
@@ -121,31 +94,112 @@ func TestRandomString(t *testing.T) {
 	}
 }
 
-func TestGenerateSecret(t *testing.T) {
+func TestMin(t *testing.T) {
+	type P struct {
+		a int64
+		b int64
+	}
 	tests := []struct {
-		name    string
-		wantLen int
+		name string
+		args P
+		want int64
 	}{
-		{"test", 50},
-		{"test", 50},
-		{"test", 50},
-		{"test", 50},
-		{"test", 50},
-		{"test", 50},
-		{"test", 50},
-		{"test", 50},
+		{"1", P{123, 321}, 123},
+		{"2", P{1231, 321}, 321},
+		{"1", P{100, 100}, 100},
+		{"1", P{-1, 1}, -1},
 	}
 	for _, tt := range tests {
-		oldOne := ""
 		t.Run(tt.name, func(t *testing.T) {
-			got := GenerateSecret()
-			if len(got) != tt.wantLen {
-				t.Errorf("GenerateSecret() = %v, want %v", len(got), tt.wantLen)
+			if got := Min(tt.args.a, tt.args.b); got != tt.want {
+				t.Errorf("Min() = %v, want %v", got, tt.want)
 			}
-			if got == oldOne {
-				t.Errorf("GenerateSecret() should be fairly unique")
+		})
+	}
+}
+
+func TestAtoi(t *testing.T) {
+	type args struct {
+		b []byte
+	}
+	tests := []struct {
+		name string
+		b    []byte
+		want uint64
+	}{
+		{"1", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Atoi(tt.b); got != tt.want {
+				t.Errorf("Atoi() = %v, want %v", got, tt.want)
 			}
-			oldOne = got
+		})
+	}
+}
+
+func TestItoa(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		i     uint64
+		wantB []byte
+	}{
+		{"1", 1, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotB := Itoa(tt.i); !reflect.DeepEqual(gotB, tt.wantB) {
+				t.Errorf("Itoa() = %v, want %v", gotB, tt.wantB)
+			}
+		})
+	}
+}
+
+func TestIfEmptyThen(t *testing.T) {
+	type P struct {
+		s           string
+		thenDefault string
+	}
+	tests := []struct {
+		name string
+		args P
+		want string
+	}{
+		{"1", P{"this", "that"}, "this"},
+		{"2", P{"", "that"}, "that"},
+		{"3", P{"  ", "that"}, "that"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IfEmptyThen(tt.args.s, tt.args.thenDefault); got != tt.want {
+				t.Errorf("IfEmptyThen() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsEqStr(t *testing.T) {
+	type P struct {
+		a string
+		b string
+	}
+	tests := []struct {
+		name string
+		args P
+		want bool
+	}{
+		{"1", P{"this", "this"}, true},
+		{"2", P{"This", "this"}, true},
+		{"3", P{"THIS", "this"}, true},
+		{"4", P{"THIS", "    this    "}, true},
+		{"5", P{"this", "that"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsEqStr(tt.args.a, tt.args.b); got != tt.want {
+				t.Errorf("IsEqStr() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
