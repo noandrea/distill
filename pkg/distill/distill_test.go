@@ -425,6 +425,24 @@ func Test_buildURLInfo(t *testing.T) {
 			&model.URLInfo{},
 			true,
 		},
+		{
+			"invalid record/expired",
+			args{
+				&model.URLReq{
+					ID:          "abc",
+					RedirectURL: "https://distill.plus",
+					ReceivedOn:  now,
+					ActiveFrom:  now.Add(time.Duration(72) * time.Hour), // 3 days
+					ExpiresOn:   now.Add(time.Duration(24) * time.Hour), // 1 day
+				},
+				config.ShortIDConfig{
+					ExpiredRedirectURL:   "https://distill.puls/global/expired",
+					ExhaustedRedirectURL: "https://distill.puls/global/exhausted",
+				},
+			},
+			&model.URLInfo{},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -435,6 +453,30 @@ func Test_buildURLInfo(t *testing.T) {
 			}
 			if err == nil && !reflect.DeepEqual(gotU, tt.wantU) {
 				t.Errorf("buildURLInfo() = \n %#v, \nwant \n%#v", gotU, tt.wantU)
+			}
+		})
+	}
+}
+
+func Test_genKey(t *testing.T) {
+	type P struct {
+		tenant string
+		id     string
+	}
+	tests := []struct {
+		name string
+		args P
+		want string
+	}{
+		{"1.1", P{"localhost", "one"}, "cdcb1a994fa1b371d356cebe61da2708:one"},
+		{"1.2", P{"localhost", "whatever"}, "cdcb1a994fa1b371d356cebe61da2708:whatever"},
+		{"1.3", P{"localhost", "🇪🇺"}, "cdcb1a994fa1b371d356cebe61da2708:🇪🇺"},
+		{"2", P{"banana", "🇪🇺"}, "54d4442917baba24a7c417d805221f17:🇪🇺"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := genKey(tt.args.tenant, tt.args.id); got != tt.want {
+				t.Errorf("genKey() = %v, want %v", got, tt.want)
 			}
 		})
 	}
