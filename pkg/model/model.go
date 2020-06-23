@@ -106,34 +106,6 @@ type Statistics struct {
 	LastRequest time.Time `json:"last_request"`
 }
 
-func (s *Statistics) String() string {
-	return fmt.Sprintf("URLs: %d, GETs: %d, Inserts: %d, Deletes: %d, GetsExpired: %d",
-		s.Urls,
-		s.Gets,
-		s.Upserts,
-		s.Deletes,
-		s.GetsExpired,
-	)
-}
-
-// Record statistics
-func (s *Statistics) Record(get, upsert, delete, urls, getExpired int64) {
-	// statsMutex.Lock()
-	// // this is confusing but actually correct
-	// // if the input number is negative will work just the same
-	// s.Gets += uint64(get)
-	// s.GetsExpired += uint64(getExpired)
-	// s.Upserts += uint64(upsert)
-	// s.Deletes += uint64(delete)
-	// s.Urls += uint64(urls)
-	// statsMutex.Unlock()
-}
-
-// ExpirationDate return the expiration date of the URLInfo
-func (u URLInfo) ExpirationDate() time.Time {
-	return u.ActiveFrom.Add(time.Duration(u.TTL) * time.Second)
-}
-
 // Bind will run after the unmarshalling is complete
 func (u *URLReq) Bind(r *http.Request) error {
 	return nil
