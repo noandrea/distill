@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 
@@ -71,22 +72,69 @@ func (es *EmbedStore) Get(key string, data interface{}) (found bool, err error) 
 }
 
 // CounterSet set a counter value
-func (es *EmbedStore) CounterSet(key string) (err error) {
+func (es *EmbedStore) CounterSet(key string, val int64) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		k := []byte(key)
+		// set the value
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, uint64(val))
+		err = txn.Set(k, b)
+		return
+	})
 	return
 }
 
 // CounterGet get a counter value
-func (es *EmbedStore) CounterGet(key string) (val int, err error) {
+func (es *EmbedStore) CounterGet(key string) (val int64, err error) {
+	err = es.db.View(func(txn *badger.Txn) (err error) {
+		b, err := dbGet(txn, []byte(key))
+		if err != nil {
+			log.Warn("key ", key, " not found, counter set to 0")
+			b = make([]byte, 8)
+		}
+		val = int64(binary.LittleEndian.Uint64(b))
+		return
+	})
 	return
 }
 
 // CounterPlus increase a counter
 func (es *EmbedStore) CounterPlus(key string) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		k := []byte(key)
+		// get the value
+		b, err := dbGet(txn, k)
+		if err != nil {
+			log.Warn("key ", key, " not found, counter set to 0")
+		}
+		// read and update
+		counter := int64(binary.LittleEndian.Uint64(b))
+		counter++
+		// now set
+		binary.LittleEndian.PutUint64(b, uint64(counter))
+		err = txn.Set(k, b)
+		return
+	})
 	return
 }
 
 // CounterMinus decrease a counter
 func (es *EmbedStore) CounterMinus(key string) (err error) {
+	err = es.db.Update(func(txn *badger.Txn) (err error) {
+		k := []byte(key)
+		// get the value
+		b, err := dbGet(txn, k)
+		if err != nil {
+			log.Warn("key ", key, " not found, counter set to 0")
+		}
+		// read and update
+		counter := int64(binary.LittleEndian.Uint64(b))
+		counter--
+		// now set
+		binary.LittleEndian.PutUint64(b, uint64(counter))
+		err = txn.Set(k, b)
+		return
+	})
 	return
 }
 
@@ -327,14 +375,6 @@ func dbDel(txn *badger.Txn, keys ...[]byte) (err error) {
 		log.Trace("dbDel write:", k)
 	}
 	return
-}
-
-func dbSetUint64(txn *badger.Txn, k []byte, val uint64) {
-	err := txn.Set(k, common.Itoa(val))
-	log.Trace("dbSetInt64 write:", k)
-	if err != nil {
-		log.Warningf("update key %X error %v ", k, err)
-	}
 }
 
 // dbGet retrieve the value of a key
