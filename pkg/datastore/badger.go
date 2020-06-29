@@ -12,6 +12,7 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
+// EmbedStore implement urlstore using a embedded db (badger)
 type EmbedStore struct {
 	db *badger.DB
 }
