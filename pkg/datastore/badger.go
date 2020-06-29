@@ -72,12 +72,12 @@ func (es *EmbedStore) Get(key string, data interface{}) (found bool, err error) 
 }
 
 // CounterSet set a counter value
-func (es *EmbedStore) CounterSet(key string) (err error) {
+func (es *EmbedStore) CounterSet(key string, val int64) (err error) {
 	return
 }
 
 // CounterGet get a counter value
-func (es *EmbedStore) CounterGet(key string) (val int, err error) {
+func (es *EmbedStore) CounterGet(key string) (val int64, err error) {
 	return
 }
 
