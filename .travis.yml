@@ -18,16 +18,15 @@ install:
 script:
   - make lint
   - make test
-# cache:
-#  timeout: 604800 # 7 days
-#  directories:
-#    - $HOME/.cache/pip
-
-# before_cache:
-#  - rm -f $HOME/.cache/pip/log/debug.log
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+
+  # Install deepsource CLI
+  - curl https://deepsource.io/cli | sh
+
+  # From the root directory, run the report coverage command
+  - ./bin/deepsource report --analyzer test-coverage --key go --value-file ./cover.out
 
 jobs:
   include:
